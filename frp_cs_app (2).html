@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프리핀스 CS 운영시스템</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+<style>
+/* ============ RESET & BASE ============ */
+:root {
+  --bg: #f5f4f1;
+  --surface: #ffffff;
+  --surface2: #f0eeea;
+  --surface3: #e8e5e0;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text1: #181816;
+  --text2: #5a5955;
+  --text3: #96948d;
+  --teal: #0a6650;
+  --teal-l: #ddf2eb;
+  --teal-m: #17996e;
+  --teal-d: #084d3c;
+  --red: #9e2828;
+  --red-l: #fbe9e9;
+  --red-m: #de4545;
+  --amber: #7a4808;
+  --amber-l: #faebd8;
+  --amber-m: #e8960e;
+  --blue: #174f96;
+  --blue-l: #e3eef9;
+  --blue-m: #2e7fd4;
+  --purple: #4a42aa;
+  --purple-l: #eceafa;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 2px 8px rgba(0,0,0,0.07);
+  --r: 12px;
+  --r-sm: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181816; --surface: #222220; --surface2: #2a2a28; --surface3: #323230;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+    --text1: #e8e6df; --text2: #b0ae a6; --text3: #6c6a63;
+    --teal-l: #042e22; --red-l: #3a1010; --amber-l: #2e1a04; --blue-l: #091e38; --purple-l: #1c1945;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text1);font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ============ LOGIN SCREEN ============ */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.login-dot{width:10px;height:10px;background:var(--teal-m);border-radius:50%}
+.login-brand{font-size:18px;font-weight:700;color:var(--text1)}
+.login-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.login-title{font-size:16px;font-weight:600;margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.field input, .field select, .field textarea{width:100%;padding:9px 12px;border:0.5px solid var(--border2);border-radius:var(--r-sm);background:var(--surface);color:var(--text1);font-size:13px;outline:none;font-family:inherit;transition:border-color 0.15s}
+.field input:focus, .field select:focus, .field textarea:focus{border-color:var(--teal-m)}
+.field textarea{resize:vertical;min-height:80px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);border:0.5px solid var(--border2);background:var(--surface);color:var(--text1);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.btn:hover{background:var(--surface2)}
+.btn-primary{background:var(--teal-m);border-color:var(--teal-m);color:#fff}
+.btn-primary:hover{background:var(--teal);border-color:var(--teal)}
+.btn-danger{background:var(--red-m);border-color:var(--red-m);color:#fff}
+.btn-danger:hover{background:var(--red)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-full{width:100%;margin-top:4px}
+.error-msg{color:var(--red);font-size:12px;margin-top:8px;padding:8px 12px;background:var(--red-l);border-radius:var(--r-sm);display:none}
+.error-msg.show{display:block}
+
+/* ============ MAIN APP LAYOUT ============ */
+#app-screen{display:none;grid-template-columns:220px 1fr;min-height:100vh}
+#app-screen.visible{display:grid}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:0.5px solid var(--border2);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-top{padding:18px 16px 14px;border-bottom:0.5px solid var(--border)}
+.logo-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.logo-dot{width:8px;height:8px;background:var(--teal-m);border-radius:50%}
+.logo-txt{font-size:15px;font-weight:700}
+.user-chip{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border-radius:var(--r-sm)}
+.user-avatar{width:24px;height:24px;border-radius:50%;background:var(--teal-m);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--text3)}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 4px;border-radius:4px}
+.logout-btn:hover{color:var(--red)}
+
+.nav{padding:10px 8px;flex:1}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--text3);padding:12px 10px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.12s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text1)}
+.nav-item.active{background:var(--teal-l);color:var(--teal);font-weight:600}
+.nav-badge{margin-left:auto;background:var(--red-m);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;min-width:16px;text-align:center}
+
+/* Main */
+.main{padding:28px 32px;overflow-x:hidden;min-width:0}
+.page{display:none}
+.page.active{display:block}
+.page-header{margin-bottom:22px}
+.page-title{font-size:20px;font-weight:700}
+.page-sub{font-size:12px;color:var(--text3);margin-top:3px}
+
+/* Metric cards */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.m-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.m-label{font-size:11px;color:var(--text3);margin-bottom:5px}
+.m-val{font-size:24px;font-weight:700;line-height:1}
+.m-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.m-card.red .m-val{color:var(--red)}
+.m-card.green .m-val{color:var(--teal)}
+.m-card.amber .m-val{color:var(--amber)}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.chart-ttl{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px}
+
+/* Tables */
+.tbl-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.tbl-head{padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tbl-ttl{font-size:13px;font-weight:600}
+.tbl-actions{display:flex;gap:8px;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:7px 12px;text-align:left;color:var(--text3);font-weight:500;border-bottom:0.5px solid var(--border);font-size:11px;background:var(--surface2);white-space:nowrap}
+td{padding:8px 12px;border-bottom:0.5px solid var(--border);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2);cursor:pointer}
+.td-main{font-weight:600;color:var(--text1)}
+.td-truncate{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Badges */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.b-red{background:var(--red-l);color:var(--red)}
+.b-green{background:var(--teal-l);color:var(--teal)}
+.b-amber{background:var(--amber-l);color:var(--amber)}
+.b-blue{background:var(--blue-l);color:var(--blue)}
+.b-purple{background:var(--purple-l);color:var(--purple)}
+.b-gray{background:var(--surface2);color:var(--text2);border:0.5px solid var(--border)}
+.sla-ok{color:var(--teal);font-weight:600;font-size:12px}
+.sla-ng{color:var(--red);font-weight:600;font-size:12px}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.fbtn{padding:4px 11px;border-radius:999px;border:0.5px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.12s;font-family:inherit}
+.fbtn:hover,.fbtn.on{background:var(--teal-l);color:var(--teal);border-color:var(--teal-m)}
+.fbtn.red.on{background:var(--red-l);color:var(--red);border-color:var(--red-m)}
+.search-box{padding:5px 11px;border-radius:var(--r-sm);border:0.5px solid var(--border2);background:var(--surface);color:var(--text1);font-size:12px;width:180px;outline:none;font-family:inherit}
+.search-box:focus{border-color:var(--blue-m)}
+
+/* Modal / Drawer */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+@media(min-width:700px){.overlay{align-items:center}}
+.modal{background:var(--surface);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:24px;position:relative}
+@media(min-width:700px){.modal{border-radius:var(--r);max-height:85vh}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0;line-height:1}
+.modal-close:hover{color:var(--text1)}
+.modal-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)}
+
+/* Detail panel */
+.detail-panel{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);padding:20px;margin-bottom:16px;display:none}
+.detail-panel.show{display:block}
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.detail-field{margin-bottom:12px}
+.detail-label{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:500}
+.detail-value{font-size:13px;color:var(--text1)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+
+/* Alert banner */
+.alert-banner{background:var(--red-l);border:0.5px solid var(--red-m);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start}
+.alert-icon{width:18px;height:18px;background:var(--red-m);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;color:#fff;font-weight:700}
+.alert-ttl{font-size:12px;font-weight:700;color:var(--red);margin-bottom:5px}
+.alert-items{list-style:none;display:flex;flex-direction:column;gap:3px}
+.alert-items li{font-size:12px;color:var(--red);display:flex;align-items:baseline;gap:6px}
+.alert-items li::before{content:'·';flex-shrink:0}
+.alert-chip{display:inline-block;background:var(--red-m);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text1);color:var(--bg);padding:10px 18px;border-radius:var(--r-sm);font-size:13px;font-weight:500;z-index:200;opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* Trello section */
+.trello-box{background:var(--blue-l);border:0.5px solid var(--blue-m);border-radius:var(--r-sm);padding:12px 14px;margin-top:12px}
+.trello-label{font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px}
+.trello-status{font-size:12px;color:var(--blue)}
+
+/* Config page */
+.config-section{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
+.config-ttl{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text1)}
+.config-note{font-size:12px;color:var(--text3);line-height:1.7;padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);margin-top:10px}
+code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);padding:1px 5px;border-radius:4px;color:var(--text1)}
+
+/* ══════ MOBILE RESPONSIVE ══════ */
+@media(max-width:768px){
+  /* 레이아웃 */
+  #app-screen.visible{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .main{padding:16px 14px 90px}  /* 하단 탭바 공간 확보 */
+
+  /* 지표 카드 */
+  .metrics-row{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .m-val{font-size:20px}
+  .m-dual-main{font-size:18px}
+  .m-label{font-size:10px}
+  .m-basis{font-size:9px}
+  .key-metrics{grid-template-columns:repeat(3,1fr);gap:4px}
+  .key-metric-val{font-size:16px}
+
+  /* 차트 */
+  .charts-row{grid-template-columns:1fr;gap:10px}
+  .chart-card{padding:12px 14px}
+
+  /* 테이블 — 모바일 카드형 변환 */
+  .tbl-card table{display:none}
+  .mobile-cards{display:flex;flex-direction:column;gap:8px;padding:10px 12px}
+  .m-cs-card{background:var(--surface2);border-radius:var(--r-sm);padding:12px;cursor:pointer;border:0.5px solid var(--border)}
+  .m-cs-card:active{background:var(--surface3)}
+  .m-cs-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+  .m-cs-title{font-size:13px;font-weight:600;color:var(--text1);margin-bottom:4px;line-height:1.4}
+  .m-cs-meta{display:flex;gap:8px;font-size:11px;color:var(--text3);flex-wrap:wrap}
+  .m-cs-sla{margin-left:auto}
+
+  /* 필터바 모바일 */
+  .filter-bar{gap:5px}
+  .fbtn{padding:4px 9px;font-size:11px}
+  .search-box{width:100%!important;margin-top:4px}
+
+  /* 페이지네이션 */
+  #cs-pagination{flex-wrap:wrap;gap:4px;padding:10px 0}
+
+  /* 모달 */
+  .modal{padding:18px 16px}
+  .modal-row{grid-template-columns:1fr}
+
+  /* 상세 패널 */
+  .detail-panel{padding:14px}
+  .detail-grid{grid-template-columns:1fr 1fr}
+
+  /* 페이지 헤더 */
+  .page-title{font-size:17px}
+  .page-sub{font-size:11px}
+
+  /* 인사이트 그리드 */
+  #page-clevel > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  .ceo-grid{grid-template-columns:1fr 1fr}
+  .report-header{flex-direction:column;gap:10px}
+  .key-metrics{grid-template-columns:repeat(3,1fr)}
+
+  /* 섹션 구분선 */
+  .section-divider{margin:14px 0 10px}
+
+  /* 로그인 카드 */
+  .login-card{padding:28px 20px}
+}
+
+/* 하단 탭 네비게이션 (모바일 전용) */
+#mobile-tabbar{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:0.5px solid var(--border2);
+  padding:6px 0 env(safe-area-inset-bottom,6px);
+  z-index:50;
+  grid-template-columns:repeat(5,1fr);
+}
+.m-tab{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 4px;cursor:pointer;background:none;border:none;
+  color:var(--text3);font-size:9px;font-weight:500;position:relative;
+  transition:color 0.15s;font-family:inherit;
+}
+.m-tab svg{width:20px;height:20px;stroke-width:1.5}
+.m-tab.active{color:var(--teal)}
+.m-tab .m-tab-badge{
+  position:absolute;top:3px;right:calc(50% - 14px);
+  background:var(--red-m);color:#fff;font-size:8px;font-weight:700;
+  padding:1px 4px;border-radius:999px;min-width:14px;text-align:center;
+}
+@media(max-width:768px){
+  #mobile-tabbar{display:grid}
+}
+
+/* 데스크탑에서 모바일 카드 숨김 */
+@media(min-width:769px){
+  .mobile-cards{display:none!important}
+}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 이중 지표 카드 */
+.m-card .m-dual{display:flex;gap:0;margin-top:4px}
+.m-dual-item{flex:1;padding-right:12px}
+.m-dual-item+.m-dual-item{padding-left:12px;padding-right:0;border-left:0.5px solid var(--border2)}
+.m-dual-main{font-size:22px;font-weight:700;line-height:1}
+.m-dual-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.m-basis{font-size:10px;color:var(--text3);margin-top:6px;padding-top:5px;border-top:0.5px solid var(--border);line-height:1.5}
+
+/* 섹션 구분선 */
+.section-divider{margin:20px 0 16px;display:flex;align-items:center;gap:10px}
+.section-divider span{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
+.section-divider::after{content:'';flex:1;height:0.5px;background:var(--border2)}
+
+/* 인사이트 박스 */
+.insight-box{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.insight-box-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.insight-row{display:flex;flex-direction:column;gap:6px}
+.insight-item{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--text2);line-height:1.5}
+.insight-item::before{content:'→';color:var(--text3);flex-shrink:0}
+
+/* SLA 기준표 인라인 */
+.sla-std-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.sla-std-table th{padding:6px 10px;text-align:left;color:var(--text3);font-weight:600;border-bottom:0.5px solid var(--border);background:var(--surface2);font-size:10px}
+.sla-std-table td{padding:6px 10px;border-bottom:0.5px solid var(--border);color:var(--text2);vertical-align:middle}
+.sla-std-table tr:last-child td{border-bottom:none}
+
+/* 월간 보고 헤더 */
+.report-header{background:var(--teal-l);border:0.5px solid var(--teal-m);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.report-month{font-size:15px;font-weight:700;color:var(--teal)}
+.report-meta{font-size:11px;color:var(--teal);opacity:0.8}
+.key-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.key-metric{text-align:center;padding:10px}
+.key-metric-val{font-size:20px;font-weight:700}
+.key-metric-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-dot"></div>
+      <div>
+        <div class="login-brand" style="font-size:22px;letter-spacing:-0.3px">프리핀스 CS 운영시스템</div>
+      </div>
+    </div>
+    <div class="login-title">로그인</div>
+    <div class="field"><label>이메일</label><input type="email" id="login-email" placeholder="이메일 입력"></div>
+    <div class="field"><label>비밀번호</label><input type="password" id="login-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="error-msg" id="login-err"></div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn" style="margin-top:16px">로그인</button>
+    <div id="demo-accounts" style="margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:600">테스트 계정 (Firebase 설정 전)</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('somi@frefins.com','cs123!')">👩 소미님 (Operation팀)</button>
+        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('op@frefins.com','op123!')">👩 Operation팀 (추가 계정)</button>
+        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('dev@frefins.com','dev123!')">👨‍💻 개발팀</button>
+        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('ceo@frefins.com','ceo123!')">👑 C-Level</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="app-screen">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo-row"><div class="logo-dot"></div><span class="logo-txt">프리핀스 CS 운영시스템</span></div>
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-role" id="user-role">—</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="로그아웃">↩</button>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">대시보드</div>
+      <button class="nav-item active" onclick="showPage('overview',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        전체 현황
+      </button>
+      <button class="nav-item" onclick="showPage('clevel',this)" id="nav-clevel">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        C-Level 현황
+      </button>
+      <div class="nav-section">CS 관리</div>
+      <button class="nav-item" onclick="showPage('cs-list',this)" id="nav-cs">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        CS 접수 목록
+        <span class="nav-badge" id="badge-pending" style="display:none">0</span>
+      </button>
+      <button class="nav-item" id="nav-register" onclick="openRegisterModal()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        CS 등록
+      </button>
+      <button class="nav-item" onclick="showPage('sla-breach',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/></svg>
+        SLA 초과 현황
+        <span class="nav-badge" id="badge-breach">0</span>
+      </button>
+      <div class="nav-section">개발</div>
+      <button class="nav-item" id="nav-dev" onclick="showPage('dev',this)">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        개발 요청 현황
+      </button>
+      <div class="nav-section">설정</div>
+      <button class="nav-item" onclick="showPage('config',this)" id="nav-config">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Firebase 설정
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="page-overview" class="page active">
+      <div class="page-header">
+        <div class="page-title">전체 현황</div>
+        <div class="page-sub" id="overview-sub">로딩 중...</div>
+      </div>
+      <!-- 알림 배너 -->
+      <div class="alert-banner" id="alert-banner" style="display:none">
+        <div class="alert-icon">!</div>
+        <div>
+          <div class="alert-ttl">즉시 확인 필요</div>
+          <ul class="alert-items" id="alert-list"></ul>
+        </div>
+      </div>
+
+      <!-- 이번 달 핵심 지표 -->
+      <div class="section-divider"><span id="overview-month-label">이번 달</span></div>
+      <div class="metrics-row">
+        <div class="m-card">
+          <div class="m-label">CS 접수건수</div>
+          <div class="m-dual">
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-month-total">—</div>
+              <div class="m-dual-sub">이번 달</div>
+            </div>
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-year-total">—</div>
+              <div class="m-dual-sub" id="stat-year-label">연간 누적</div>
+            </div>
+          </div>
+          <div class="m-basis" id="stat-total-basis">—</div>
+        </div>
+        <div class="m-card amber">
+          <div class="m-label">처리 중 (미완료)</div>
+          <div class="m-dual">
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-month-pending">—</div>
+              <div class="m-dual-sub">이번 달</div>
+            </div>
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-year-pending">—</div>
+              <div class="m-dual-sub" id="stat-year-pending-label">연간 누적</div>
+            </div>
+          </div>
+          <div class="m-basis">접수·진행 중 건 기준</div>
+        </div>
+        <div class="m-card green">
+          <div class="m-label">처리 완료율</div>
+          <div class="m-dual">
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-month-rate">—</div>
+              <div class="m-dual-sub">이번 달</div>
+            </div>
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-year-rate">—</div>
+              <div class="m-dual-sub" id="stat-year-rate-label">연간 누적</div>
+            </div>
+          </div>
+          <div class="m-basis">완료 건 ÷ 전체 접수 건 기준</div>
+        </div>
+        <div class="m-card red">
+          <div class="m-label">SLA 초과 (누적)</div>
+          <div class="m-dual">
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-breach-month">—</div>
+              <div class="m-dual-sub">이번 달</div>
+            </div>
+            <div class="m-dual-item">
+              <div class="m-dual-main" id="stat-breach-total">—</div>
+              <div class="m-dual-sub">25년 이후 전체</div>
+            </div>
+          </div>
+          <div class="m-basis">SLA 기준 내 미처리 건 합산</div>
+        </div>
+      </div>
+
+      <!-- 차트 -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-ttl">월별 CS 접수 / 처리 완료율</div>
+          <div style="display:flex;gap:12px;margin-bottom:8px">
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#17996e;opacity:0.5;display:inline-block"></span>접수</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#de4545;opacity:0.4;display:inline-block"></span>SLA 초과</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:24px;height:2px;background:#2e7fd4;display:inline-block;border-radius:1px"></span>완료율</span>
+          </div>
+          <div style="position:relative;height:190px"><canvas id="chart-monthly"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">유형별 접수 현황 (건수 내림차순)</div>
+          <div style="position:relative;height:210px"><canvas id="chart-type"></canvas></div>
+        </div>
+      </div>
+      <!-- 기업구분 차트 -->
+      <div class="charts-row" style="grid-template-columns:1fr 1fr;margin-bottom:0">
+        <div class="chart-card">
+          <div class="chart-ttl">기업구분별 접수 현황</div>
+          <div style="position:relative;height:180px"><canvas id="chart-biz"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">이번 달 유형별 현황</div>
+          <div style="position:relative;height:180px"><canvas id="chart-month-type"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-LEVEL -->
+    <div id="page-clevel" class="page">
+      <div class="page-header"><div class="page-title">C-Level 핵심 현황</div><div class="page-sub" id="clevel-sub">경영진 즉시 확인 지표</div></div>
+
+      <!-- 월간 보고 헤더 -->
+      <div class="report-header">
+        <div>
+          <div class="report-month" id="clevel-month-title">— 월 CS 운영 현황</div>
+          <div class="report-meta">프리핀스 서비스 고객 응대 현황</div>
+        </div>
+        <div class="key-metrics">
+          <div class="key-metric"><div class="key-metric-val" id="c-month-total" style="color:var(--teal)">—</div><div class="key-metric-lbl">이번 달 접수</div></div>
+          <div class="key-metric"><div class="key-metric-val" id="c-month-rate" style="color:var(--teal)">—</div><div class="key-metric-lbl">처리 완료율</div></div>
+          <div class="key-metric"><div class="key-metric-val" id="c-breach" style="color:var(--red)">—</div><div class="key-metric-lbl">SLA 초과 누적</div></div>
+        </div>
+      </div>
+
+      <!-- 운영 인사이트 -->
+      <div class="section-divider"><span>서비스 운영 인사이트</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div class="insight-box">
+          <div class="insight-box-title">📊 이번 달 현황 요약</div>
+          <div class="insight-row" id="c-insight-month"></div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-box-title">⚠️ 운영 리스크 포인트</div>
+          <div class="insight-row" id="c-insight-risk"></div>
+        </div>
+      </div>
+
+      <!-- 개발 요청 미완료 현황 (SLA 초과보다 먼저) -->
+      <div class="section-divider"><span>개발 요청 현황 (미처리)</span></div>
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <span class="tbl-ttl">개선 요구 중 미반영 항목</span>
+          <span style="font-size:12px;color:var(--text3)" id="c-dev-cnt">—</span>
+        </div>
+        <table><thead><tr><th>NO</th><th>구분</th><th>개발 항목</th><th>상태</th><th>CEO 피드백 / 의사결정 필요</th></tr></thead>
+        <tbody id="clevel-dev-tbody"></tbody></table>
+      </div>
+
+      <!-- SLA 초과 현황 (진행 중인 건만) -->
+      <div class="section-divider"><span>SLA 초과 현황 — 진행 중인 건</span></div>
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <span class="tbl-ttl">SLA 초과 목록 (진행 중 · 초과일 긴 순)</span>
+          <span style="font-size:12px;color:var(--text3)" id="c-breach-cnt">—</span>
+        </div>
+        <table><thead><tr><th>접수일</th><th>유형</th><th>업체명</th><th>내용</th><th>초과</th><th>상태</th><th>담당</th></tr></thead>
+        <tbody id="clevel-breach-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CS LIST -->
+    <div id="page-cs-list" class="page">
+      <div class="page-header">
+        <div class="page-title">CS 접수 목록</div>
+        <div class="page-sub" id="cs-list-sub">—</div>
+      </div>
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="detail-header">
+          <div style="font-size:14px;font-weight:700" id="dp-title">—</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openEditModal()" id="dp-edit-btn">수정</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCS()" id="dp-del-btn">삭제</button>
+            <button class="btn btn-sm" onclick="closeDetail()">닫기</button>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-field"><div class="detail-label">접수일</div><div class="detail-value" id="dp-date">—</div></div>
+          <div class="detail-field"><div class="detail-label">인입 채널</div><div class="detail-value" id="dp-channel">—</div></div>
+          <div class="detail-field"><div class="detail-label">담당자</div><div class="detail-value" id="dp-staff">—</div></div>
+          <div class="detail-field"><div class="detail-label">유형</div><div class="detail-value" id="dp-type">—</div></div>
+          <div class="detail-field"><div class="detail-label">기업구분</div><div class="detail-value" id="dp-biz">—</div></div>
+          <div class="detail-field"><div class="detail-label">업체명</div><div class="detail-value" id="dp-co">—</div></div>
+        </div>
+        <div class="detail-field"><div class="detail-label">내용</div><div class="detail-value" id="dp-content" style="line-height:1.7">—</div></div>
+        <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 상태 / SLA</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <span id="dp-status">—</span>
+            <span id="dp-sla">—</span>
+            <select id="dp-status-select" onchange="updateStatus(this.value)" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:var(--r-sm);background:var(--surface);color:var(--text1);cursor:pointer">
+              <option value="">상태 변경...</option>
+              <option value="접수">접수</option>
+              <option value="진행 중">진행 중</option>
+              <option value="완료">완료</option>
+              <option value="보류">보류</option>
+            </select>
+          </div>
+        </div>
+        <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 내용 메모</div><div class="detail-value" id="dp-memo" style="color:var(--text2)">—</div></div>
+        <div class="trello-box" id="dp-trello" style="display:none">
+          <div class="trello-label">📋 Trello 카드</div>
+          <div class="trello-status" id="dp-trello-url">—</div>
+        </div>
+      </div>
+
+      <!-- 처리 상태 필터 -->
+      <div class="filter-bar" style="margin-bottom:6px">
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap">처리 상태</span>
+        <button class="fbtn on" id="sf-all"    onclick="filterStatus('all',this)">전체</button>
+        <button class="fbtn"   id="sf-active"  onclick="filterStatus('active',this)">🔵 진행 중</button>
+        <button class="fbtn"   id="sf-done"    onclick="filterStatus('완료',this)">✅ 완료</button>
+        <button class="fbtn"   id="sf-hold"    onclick="filterStatus('보류',this)">⏸ 보류</button>
+        <button class="fbtn"   id="sf-new"     onclick="filterStatus('접수',this)">🆕 접수</button>
+      </div>
+      <!-- 유형 + 기간 + 검색 -->
+      <div class="filter-bar">
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap">유형</span>
+        <button class="fbtn on" onclick="filterType('all',this)">전체</button>
+        <button class="fbtn" onclick="filterType('단순 문의',this)">단순 문의</button>
+        <button class="fbtn" onclick="filterType('오류',this)">오류</button>
+        <button class="fbtn" onclick="filterType('수정',this)">수정</button>
+        <button class="fbtn" onclick="filterType('삭제',this)">삭제</button>
+        <button class="fbtn" onclick="filterType('개선 요청',this)">개선 요청</button>
+        <button class="fbtn red" id="breach-only-btn" onclick="toggleBreachOnly(this)">⚠ SLA 초과</button>
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap;margin-left:4px">기간</span>
+        <select id="month-filter" onchange="filterMonth(this.value)" style="font-size:12px;padding:4px 10px;border:0.5px solid var(--border2);border-radius:999px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
+          <option value="all">전체 월</option>
+        </select>
+        <input class="search-box" placeholder="업체명·내용 검색..." oninput="filterSearch(this.value)" style="width:150px">
+        <button class="btn btn-primary btn-sm" id="cs-list-register-btn" onclick="openRegisterModal()" style="margin-left:auto">+ CS 등록</button>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <span class="tbl-ttl" id="cs-tbl-ttl">CS 목록</span>
+          <span style="font-size:12px;color:var(--text3)" id="cs-tbl-cnt">—</span>
+        </div>
+        <table>
+          <thead><tr><th>접수일</th><th>채널</th><th>유형</th><th>기업구분</th><th>업체명</th><th>내용</th><th>상태</th><th>SLA</th><th>담당</th></tr></thead>
+          <tbody id="cs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SLA BREACH -->
+    <div id="page-sla-breach" class="page">
+      <div class="page-header"><div class="page-title">SLA 초과 현황</div></div>
+
+      <!-- 처리 상태 필터 -->
+      <div class="filter-bar" style="margin-bottom:6px">
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap">처리 상태</span>
+        <button class="fbtn on" onclick="breachFilterStatus('active',this)">🔵 진행 중</button>
+        <button class="fbtn"    onclick="breachFilterStatus('all',this)">전체</button>
+        <button class="fbtn"    onclick="breachFilterStatus('완료',this)">✅ 완료</button>
+      </div>
+      <!-- 유형 + 검색 -->
+      <div class="filter-bar">
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap">유형</span>
+        <button class="fbtn on" onclick="breachFilterType('all',this)">전체</button>
+        <button class="fbtn" onclick="breachFilterType('단순 문의',this)">단순 문의</button>
+        <button class="fbtn" onclick="breachFilterType('오류',this)">오류</button>
+        <button class="fbtn" onclick="breachFilterType('수정',this)">수정</button>
+        <button class="fbtn" onclick="breachFilterType('삭제',this)">삭제</button>
+        <button class="fbtn" onclick="breachFilterType('개선 요청',this)">개선 요청</button>
+        <input class="search-box" id="breach-search" placeholder="업체명·내용 검색..." oninput="breachFilterSearch(this.value)" style="width:180px;margin-left:4px">
+      </div>
+
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <span class="tbl-ttl">SLA 초과 목록 (25년 이후 누적)</span>
+          <span style="font-size:12px;color:var(--text3)" id="breach-cnt">—</span>
+        </div>
+        <table><thead><tr><th>접수일</th><th>유형</th><th>기업구분</th><th>업체명</th><th>내용</th><th>초과</th><th>상태</th><th>담당</th></tr></thead>
+        <tbody id="breach-tbody"></tbody></table>
+      </div>
+
+      <!-- SLA 기준표 -->
+      <div class="section-divider" style="margin-top:24px"><span>SLA 응대 기준표</span></div>
+      <div class="tbl-card">
+        <div class="tbl-head"><span class="tbl-ttl">프리핀스 SLA 기준 (25-07-29 제정)</span><span style="font-size:11px;color:var(--text3)">유형별 1차 응답 및 해결 목표 시간</span></div>
+        <table class="sla-std-table">
+          <thead><tr><th>구분</th><th>유형</th><th>1차 응답 목표</th><th>해결 목표</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>문의</td><td>일반 문의</td><td><span class="badge b-green">4시간 이내</span></td><td><span class="badge b-green">1영업일</span></td><td style="color:var(--text3)">즉시 답변 기본</td></tr>
+            <tr><td rowspan="2">삭제</td><td>개인정보 삭제</td><td><span class="badge b-blue">1영업일</span></td><td><span class="badge b-blue">3영업일</span></td><td style="color:var(--text3)">개인정보보호법 준수</td></tr>
+            <tr><td>고객정보·계약·결제 삭제</td><td><span class="badge b-blue">1영업일</span></td><td><span class="badge b-blue">3영업일</span></td><td style="color:var(--text3)">개발실 템플릿 반영 요청</td></tr>
+            <tr><td>수정</td><td>서비스 정보 수정</td><td><span class="badge b-blue">1영업일</span></td><td><span class="badge b-blue">3영업일</span></td><td style="color:var(--text3)">개발실 템플릿 반영 요청</td></tr>
+            <tr><td rowspan="2">오류</td><td>서비스 장애/다운</td><td><span class="badge b-red">1시간 이내</span></td><td><span class="badge b-red">1~24시간</span></td><td style="color:var(--text3)">서비스 장애 공지 병행</td></tr>
+            <tr><td>오류/버그 신고</td><td><span class="badge b-amber">2~4시간</span></td><td><span class="badge b-amber">7영업일</span></td><td style="color:var(--text3)">S1~S4 심각도 분류 적용</td></tr>
+            <tr><td>개선</td><td>기능 개선 제안</td><td><span class="badge b-gray">3영업일 회신</span></td><td><span class="badge b-gray">14일 피드백</span></td><td style="color:var(--text3)">반영 시점 별도 안내</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-card" style="margin-top:12px">
+        <div class="tbl-head"><span class="tbl-ttl">심각도 분류 기준 (S1~S4)</span></div>
+        <table class="sla-std-table">
+          <thead><tr><th>등급</th><th>정의</th><th>대응 기준</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge b-red">S1 Critical</span></td><td>전체 서비스 장애, 고객 사용 불가</td><td>즉시 대응</td></tr>
+            <tr><td><span class="badge b-amber">S2 High</span></td><td>주요 기능 오류로 일부 사용 불가</td><td>당일 대응</td></tr>
+            <tr><td><span class="badge b-blue">S3 Medium</span></td><td>비핵심 기능 오류, 우회 가능</td><td>2~3영업일</td></tr>
+            <tr><td><span class="badge b-gray">S4 Low</span></td><td>UI 불편, 오타 등 경미한 요청</td><td>7영업일 이내</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DEV -->
+    <div id="page-dev" class="page">
+      <div class="page-header"><div class="page-title">개발 요청 현황</div></div>
+      <div class="tbl-card">
+        <div class="tbl-head"><span class="tbl-ttl">개발 요청 목록</span><span class="tbl-ttl" style="font-weight:400;color:var(--text3)">Trello 연동 데이터</span></div>
+        <table><thead><tr><th>NO</th><th>구분</th><th>개발 항목</th><th>접수일</th><th>완료 예정</th><th>상태</th><th>CEO 피드백</th></tr></thead>
+        <tbody id="dev-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="page-config" class="page">
+      <div class="page-header"><div class="page-title">Firebase 설정</div><div class="page-sub">아래 설정을 완료하면 실시간 데이터 저장이 활성화됩니다</div></div>
+      <div class="config-section">
+        <div class="config-ttl">🔥 Firebase 프로젝트 설정</div>
+        <div class="field"><label>API Key</label><input id="cfg-apiKey" placeholder="AIza..."></div>
+        <div class="field"><label>Auth Domain</label><input id="cfg-authDomain" placeholder="your-project.firebaseapp.com"></div>
+        <div class="field"><label>Project ID</label><input id="cfg-projectId" placeholder="your-project-id"></div>
+        <div class="field"><label>App ID</label><input id="cfg-appId" placeholder="1:123..."></div>
+        <button class="btn btn-primary" onclick="saveFirebaseConfig()">설정 저장 및 연결</button>
+        <div class="config-note">
+          1. <a href="https://console.firebase.google.com" target="_blank" style="color:var(--blue)">Firebase Console</a>에서 새 프로젝트 생성<br>
+          2. Authentication → 이메일/비밀번호 로그인 활성화<br>
+          3. Firestore Database 생성 (프로덕션 모드)<br>
+          4. 프로젝트 설정 → 앱 추가 → 웹 앱 → 설정값 복사 후 위에 입력
+        </div>
+      </div>
+      <div class="config-section">
+        <div class="config-ttl">📋 Trello 연동 설정</div>
+        <div class="field"><label>Trello API Key</label><input id="cfg-trelloKey" placeholder="Trello API Key"></div>
+        <div class="field"><label>Trello Token</label><input id="cfg-trelloToken" placeholder="Trello Token"></div>
+        <div class="field"><label>개발팀 Board ID</label><input id="cfg-trelloBoardId" placeholder="Board ID"></div>
+        <div class="field"><label>List ID (개발 요청 접수)</label><input id="cfg-trelloListId" placeholder="List ID"></div>
+        <button class="btn btn-primary" onclick="saveTrelloConfig()">Trello 설정 저장</button>
+        <div class="config-note">
+          Trello API Key: <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> 에서 발급<br>
+          Board/List ID: Trello 카드 URL에서 확인 가능<br>
+          개선 요청, 오류 건이 자동으로 Trello 카드로 생성됩니다
+        </div>
+      </div>
+      <div class="config-section">
+        <div class="config-ttl">👥 사용자 계정 관리</div>
+        <div class="modal-row">
+          <div class="field"><label>이메일</label><input id="cfg-email" placeholder="담당자 이메일"></div>
+          <div class="field"><label>비밀번호</label><input type="password" id="cfg-pw" placeholder="초기 비밀번호"></div>
+        </div>
+        <div class="modal-row">
+          <div class="field"><label>이름</label><input id="cfg-uname" placeholder="홍길동"></div>
+          <div class="field"><label>역할</label>
+            <select id="cfg-role">
+              <option value="cs">Operation팀 (소미님 등)</option>
+              <option value="dev">개발팀</option>
+              <option value="clevel">C-Level</option>
+              <option value="admin">관리자</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="createUser()">계정 생성</button>
+        <div class="config-note">Firebase Authentication에 계정이 생성됩니다. 역할(role)에 따라 접근 가능한 메뉴가 달라집니다.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- CS 등록/수정 모달 -->
+<div class="overlay" id="cs-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">CS 등록</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-row">
+      <div class="field"><label>인입 채널 *</label>
+        <select id="f-channel">
+          <option value="채널톡">채널톡</option>
+          <option value="전화">전화</option>
+          <option value="이메일">이메일</option>
+          <option value="담당자 카톡">담당자 카톡</option>
+          <option value="프리핀스 담당자">프리핀스 담당자</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field"><label>접수일 *</label><input type="date" id="f-date"></div>
+    </div>
+    <div class="modal-row">
+      <div class="field"><label>유형 *</label>
+        <select id="f-type">
+          <option value="단순 문의">단순 문의</option>
+          <option value="오류">오류</option>
+          <option value="수정">수정</option>
+          <option value="삭제">삭제</option>
+          <option value="개선 요청">개선 요청</option>
+        </select>
+      </div>
+      <div class="field"><label>기업구분 *</label>
+        <select id="f-biz">
+          <option value="렌트카">렌트카</option>
+          <option value="일반 렌탈">일반 렌탈</option>
+          <option value="FRP 공통">FRP 공통</option>
+          <option value="금융">금융</option>
+          <option value="바이크">바이크</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="field"><label>업체명 *</label><input type="text" id="f-co" placeholder="업체명 또는 고객명"></div>
+      <div class="field"><label>담당자 *</label>
+        <select id="f-staff">
+          <option value="유소미">유소미</option>
+          <option value="안소진">안소진</option>
+          <option value="김수아">김수아</option>
+          <option value="김효민">김효민</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>CS 내용 *</label><textarea id="f-content" placeholder="고객 문의 또는 요청 내용을 상세히 입력해주세요"></textarea></div>
+    <div class="field"><label>처리 메모 (선택)</label><textarea id="f-memo" placeholder="처리 과정이나 현재 상황을 메모해주세요" style="min-height:60px"></textarea></div>
+    <div class="field"><label>처리 상태</label>
+      <select id="f-status">
+        <option value="접수">접수</option>
+        <option value="진행 중">진행 중</option>
+        <option value="완료">완료</option>
+        <option value="보류">보류</option>
+      </select>
+    </div>
+    <div class="trello-box" id="trello-preview" style="display:none">
+      <div class="trello-label">📋 Trello 자동 전달</div>
+      <div class="trello-status">유형이 <strong>오류</strong> 또는 <strong>개선 요청</strong>인 경우 개발팀 Trello 보드에 자동으로 카드가 생성됩니다.</div>
+    </div>
+    <div class="error-msg" id="modal-err"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitCS()" id="submit-btn">
+        <span id="submit-label">등록</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 모바일 하단 탭바 -->
+<div id="mobile-tabbar">
+  <button class="m-tab active" id="mtab-overview" onclick="mobileNav('overview',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    현황
+  </button>
+  <button class="m-tab" id="mtab-clevel" onclick="mobileNav('clevel',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    C-Level
+  </button>
+  <button class="m-tab" id="mtab-cs-list" onclick="mobileNav('cs-list',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    CS 목록
+    <span class="m-tab-badge" id="mtab-badge-pending" style="display:none">0</span>
+  </button>
+  <button class="m-tab" id="mtab-sla-breach" onclick="mobileNav('sla-breach',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/></svg>
+    SLA 초과
+    <span class="m-tab-badge" id="mtab-badge-breach">0</span>
+  </button>
+  <button class="m-tab" id="mtab-dev" onclick="mobileNav('dev',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+    개발
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Chart.js datalabels 전역 등록
+if (typeof ChartDataLabels !== 'undefined') {
+  Chart.register(ChartDataLabels);
+}
+
+// Firebase 연결 여부 확인 → 테스트 계정 블록 숨김
+function checkFirebaseMode() {
+  const isConfigured = localStorage.getItem('fb_apiKey') &&
+    localStorage.getItem('fb_apiKey') !== 'YOUR_API_KEY';
+  const demoEl = document.getElementById('demo-accounts');
+  if (demoEl) demoEl.style.display = isConfigured ? 'none' : '';
+}
+checkFirebaseMode();
+
+// ============ FIREBASE CONFIG ============
+// 실제 Firebase 설정값으로 교체하세요
+const FIREBASE_CONFIG = {
+  apiKey: localStorage.getItem('fb_apiKey') || "YOUR_API_KEY",
+  authDomain: localStorage.getItem('fb_authDomain') || "YOUR_PROJECT.firebaseapp.com",
+  projectId: localStorage.getItem('fb_projectId') || "YOUR_PROJECT_ID",
+  storageBucket: localStorage.getItem('fb_storageBucket') || "YOUR_PROJECT.appspot.com",
+  appId: localStorage.getItem('fb_appId') || "YOUR_APP_ID"
+};
+
+const TRELLO_CONFIG = {
+  key: localStorage.getItem('trello_key') || '',
+  token: localStorage.getItem('trello_token') || '',
+  listId: localStorage.getItem('trello_listId') || ''
+};
+
+// ============ DEMO MODE (Firebase 설정 전) ============
+const DEMO_USERS = {
+  'somi@frefins.com':  {pw:'cs123!', name:'유소미', role:'cs', avatar:'소미'},
+  'op@frefins.com':     {pw:'op123!',  name:'Operation팀', role:'cs', avatar:'OP'},
+  'dev@frefins.com':   {pw:'dev123!', name:'개발팀', role:'dev', avatar:'개발'},
+  'ceo@frefins.com':   {pw:'ceo123!', name:'C-Level', role:'clevel', avatar:'CEO'},
+};
+
+let demoMode = true;
+let currentUser = null;
+let currentUserData = null;
+let allCS = [];
+let editingId = null;
+let selectedCSId = null;
+let typeFilter = 'all';
+let statusFilter = 'all';
+let monthFilter = 'all';
+let breachOnly = false;
+let searchTerm = '';
+let monthlyChart = null;
+let typeChart = null;
+let csPage = 1;
+const CS_PAGE_SIZE = 20;
+
+// ============ ACTUAL DATA (502건) ============
+const DEMO_CS = [{"id":"cs0000","date":"2025-07-16","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"렌트투게더","content":"계약서 전체 다운로드 가능 여부","status":"완료","sla":"OK","memo":"계약서의 경우 개별 다운로드만 가능하다는 답변","staff":"유소미"},{"id":"cs0001","date":"2025-07-21","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"리딩에이스캐피탈","content":"퓨어코스매틱 정산계좌 관련 문의","status":"완료","sla":"OK","memo":"카드결제분 리딩쪽 입금 확인 / 고객사_고객명 및 금액 안내","staff":"안소진"},{"id":"cs0002","date":"2025-07-22","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"리딩에이스캐피탈","content":"고객사별 정산계좌 관련 의 건","status":"완료","sla":"OK","memo":"","staff":"안소진"},{"id":"cs0003","date":"2025-07-23","channel":"메일","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행","status":"완료","sla":"6일초과","memo":"07/30일 배포예정, 이전 건은 수동발행 필요","staff":"김수아"},{"id":"cs0004","date":"2025-07-24","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"제이비/금봉 렌트카","content":"FRP 이용료 출금 건 계산서 발행","status":"완료","sla":"OK","memo":"영현님에게 발행 여부 확인 후 답변","staff":"유소미"},{"id":"cs0005","date":"2025-07-24","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약정보 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0006","date":"2025-07-25","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"더조각","content":"렌탈 취소로 인한 계약서 삭제 및 CMS 취소","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0007","date":"2025-07-25","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"SB렌탈","content":"FRP 이용료 이중 출금 발생","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 진행 중 / 재무회계팀 요청하여 환불 후속 조치 진행 완료","staff":"유소미"},{"id":"cs0008","date":"2025-07-28","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"고객 결제 미수관리로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0009","date":"2025-07-28","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"담당자 변경으로 기능 관련 문의","status":"완료","sla":"OK","memo":"단순문의로 즉각적으로 응대 및 완료","staff":"안소진"},{"id":"cs0010","date":"2025-07-28","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"리버스헬스케어","content":"계약서  작성 후 '계약서 작성'(저장) 안되는 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"안소진"},{"id":"cs0011","date":"2025-07-28","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"담당자 변경으로 FRP 기능 관련 문의","status":"완료","sla":"OK","memo":"자체 안내 후 종결","staff":"안소진"},{"id":"cs0012","date":"2025-07-29","channel":"기타(로켓CS)","type":"수정","biz":"일반 렌탈","co":"리버스헬스케어","content":"FRP 계약기간 만료로 휴면계정 해제","status":"완료","sla":"5일초과","memo":"메일 발송 및 트렐로 접수 / 1] 휴면계정해제 2] 연납 > 월납 변경(CMS 출금일 말일)","staff":"안소진"},{"id":"cs0013","date":"2025-07-30","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"계약 취소 건에 대한 CMS 해지","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0014","date":"2025-07-31","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행 주기 문의","status":"완료","sla":"OK","memo":"CTO님 메일 확인 / 매일 15시 기준,  자동 발행이 체크되어 있는 세금 계산서, 현금영수증(전화번호 기준) 자동 발행될 예정 안내 완료","staff":"유소미"},{"id":"cs0015","date":"2025-08-01","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"고객 결제 계좌번호 변경 요청 및 변경 계좌로 CMS 진행","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0016","date":"2025-08-01","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"더조각","content":"고객 결제 계좌번호 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0017","date":"2025-08-01","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"FRP 접속 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0018","date":"2025-08-01","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"고객 결제 계좌번호 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0019","date":"2025-08-01","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 발행 취소","status":"완료","sla":"OK","memo":"자동발행 실행 목록에 해당 된 업체라 직접 국세청에서 취소 요청 드려야한다고 안내","staff":"유소미"},{"id":"cs0020","date":"2025-08-04","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)사운드그래프","content":"월 납입금 변경","status":"완료","sla":"OK","memo":"해당 건은 단건으로, 1회차 결제가 진행되어 계약이 완료된 상태라고 안내","staff":"유소미"},{"id":"cs0021","date":"2025-08-04","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"유입경로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0022","date":"2025-08-04","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"결제 실행 이력이 있는 고객, 존재하지 않음 표시 및 CMS 실행 안됨","status":"완료","sla":"OK","memo":"소진팀장님과 더조각 계약 담당하시는 과장님께서 소통 / CMS 연결 먼저 하고 미수에서 재실행 하기로 소통된 것으로 확인","staff":"유소미"},{"id":"cs0023","date":"2025-08-04","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"차량모델 추가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"김수아"},{"id":"cs0024","date":"2025-08-05","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"결제정보 단건 삭제","status":"완료","sla":"OK","memo":"계약이 완료 된 건이라 단 건 삭제는 불가, 이미 완료 된 계약의 내용을 기반으로 정기 및 단 건 금액이 다 청구 생성 된 상황 안내 완료","staff":"유소미"},{"id":"cs0025","date":"2025-08-05","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 중복 발행 ","status":"완료","sla":"3일초과","memo":"트렐로에 접수 후 처리 중","staff":"김수아"},{"id":"cs0026","date":"2025-08-05","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"CMS 다른 카드로 변경 등록","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0027","date":"2025-08-05","channel":"채널톡","type":"삭제","biz":"바이크","co":"썬더크루","content":"계좌 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0028","date":"2025-08-06","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"청구 안내 발송 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0029","date":"2025-08-06","channel":"채널톡","type":"단순 문의","biz":"바이크","co":"썬더크루","content":"고객 정보 입력란에 생년월일 입력 칸 생성","status":"완료","sla":"10일초과","memo":"트렐로에 접수 되었지만 개발 우선 순위에 없어 해당 내용은 8월말정도에 처리 될 것 으로 방문해서 안내 / 처리 완료","staff":"유소미"},{"id":"cs0030","date":"2025-08-06","channel":"채널톡","type":"오류","biz":"바이크","co":"썬더크루","content":"계산서 발행 및 입금확인' 탭에서 입금 상태 '대기' 검색 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0031","date":"2025-08-07","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"부엉이돈가스","content":"가맹 개설시 주방 설비에 대한 렌탈 가능 여부 상담","status":"완료","sla":"OK","memo":"영업부서로 이관","staff":"유소미"},{"id":"cs0032","date":"2025-08-07","channel":"채널톡","type":"단순 문의","biz":"바이크","co":"썬더크루","content":"계약 건이 미수 관리에서 확인 되지 않음","status":"완료","sla":"OK","memo":"결제가 완료 된 건이라 미수 관리에서 확인이 되지 않음을 안내","staff":"유소미"},{"id":"cs0033","date":"2025-08-08","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"기존 계약 CMS 해지 및 재승인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0034","date":"2025-08-11","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"결제 회차 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0035","date":"2025-08-12","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"납입 횟수 변경 및 CMS 해지","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 중 / 녹취록 업로드 완료 / 민석PO 처리 완료","staff":"유소미"},{"id":"cs0036","date":"2025-08-12","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"CMS 해지 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0037","date":"2025-08-13","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"청구 금액 상이로 인한 수정 요청","status":"완료","sla":"3일초과","memo":"트렐로에 접수 후 처리 완료 / 해당 담당자 퇴사로 연락이 늦어져 다른 담당자에게 내용 공유 완료 / 공휴일, 주말 포함 휴일(3일)","staff":"유소미"},{"id":"cs0038","date":"2025-08-14","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 중복 발행","status":"완료","sla":"2일초과","memo":"트렐로에 접수 후 처리 중","staff":"김수아"},{"id":"cs0039","date":"2025-08-14","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"고객 결제 계좌번호 변경","status":"완료","sla":"OK","memo":"계좌 또는 카드 변경을 원하시는 계약으로 들어가 결제 정보란에 \"CMS 초기화\" 버튼을 누르면 렌탈 고객에게 CMS 요청되어 결제정보를 수정할 ","staff":"유소미"},{"id":"cs0040","date":"2025-08-18","channel":"채널톡","type":"오류","biz":"렌트카","co":"제이비렌트카","content":"공동인증서 등록 시 [저장]버튼이 보이지 않음","status":"완료","sla":"4일초과","memo":"트렐로에 접수 후 처리 중 / FRP 2.0 버전 런칭 사유로 26일에 처리 예정 안내 / 처리 후 고객사 확인 기다리는 중","staff":"유소미"},{"id":"cs0041","date":"2025-08-18","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"이메일, 전화번호를 올바르게 작성해도 청구안내 발송이 되지 않음","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0042","date":"2025-08-18","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"청구스케줄과 결제 예정일이 상이하게 노출","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0043","date":"2025-08-18","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"차량모델 추가","status":"완료","sla":"OK","memo":"고객사에게 수기작성 요청 드렸으며 차량모델 추가 관련해 추가 업데이트 사항이 있을 것이라고 안내 완료 ","staff":"유소미"},{"id":"cs0044","date":"2025-08-19","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"CMS초기화 후 재승인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0045","date":"2025-08-21","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약완료 건 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0046","date":"2025-08-21","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 내용 잘려 보이는 오류 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0047","date":"2025-08-21","channel":"채널톡","type":"오류","biz":"바이크","co":"썬더크루","content":"범용인증서 등록 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0048","date":"2025-08-25","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"고객 미수관리로 변경 ","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0049","date":"2025-08-25","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"청구 금액 상이로 인한 수정 요청","status":"완료","sla":"2일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0050","date":"2025-08-25","channel":"채널톡","type":"수정","biz":"렌트카","co":"렌트투게더","content":"운전자 정보 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0051","date":"2025-08-26","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"계약서 전송 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 이폼사인에서 오전에 잠시 문제가 발생하여 현재는 정상 작동 / 해당 내용 고객에게 안내 완료","staff":"유소미"},{"id":"cs0052","date":"2025-08-26","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"청구 금액 상이로 인한 수정 요청","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0053","date":"2025-08-26","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"미수관리에서 고객 미수금액이 노출되지 않음","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 계약의 결제 처리는 완료 되었지만 고객사 답변을 위해 개발실 답변 기다리는 중","staff":"유소미"},{"id":"cs0054","date":"2025-08-26","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"결제 예정일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0055","date":"2025-08-27","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"미납금액 입력할 수 있도록 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0056","date":"2025-08-27","channel":"채널톡","type":"수정","biz":"바이크","co":"썬더크루","content":"고객사 실수로 납부완료 취소 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0057","date":"2025-08-28","channel":"채널톡","type":"삭제","biz":"바이크","co":"썬더크루","content":"중복 계약 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0058","date":"2025-09-03","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0059","date":"2025-09-03","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"기존 고객 추가 계약 건 정기 결제일에 진행되지 않고 미수관리로 노출","status":"완료","sla":"OK","memo":"시스템 문제로 개선 사항으로접수 되어 9월 19일 전까지 해결하기로 함 / 고객사쪽에서 미수로 결제 하기로 함 ","staff":"유소미"},{"id":"cs0060","date":"2025-09-05","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"차량 연식이 등록 된 내용과 상이하게 계약서에 노출 됨","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0061","date":"2025-09-08","channel":"채널톡","type":"삭제","biz":"바이크","co":"썬더크루","content":"중복 계약 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0062","date":"2025-09-08","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0063","date":"2025-09-08","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계좌 입출금 내역 조회 불가","status":"완료","sla":"5일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0064","date":"2025-09-10","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0065","date":"2025-09-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"렌탈케이","content":"문의 건 ","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0066","date":"2025-09-10","channel":"채널톡","type":"오류","biz":"바이크","co":"썬더크루","content":"청구 회차 오류 확인","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0067","date":"2025-09-11","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"렌탈케이","content":"대기건 검색시 청구필요건까지 함께 노출 됨","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 중 / 검색시 오류는 처리완료 / 엑셀 다운시 추후 개선 예정 / 배포 완료","staff":"유소미"},{"id":"cs0068","date":"2025-09-11","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"렌탈케이","content":"견적건 클릭시 팝업","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 처리를 위한 고객 확인이 늦어져 작업이 늦춰짐","staff":"유소미"},{"id":"cs0069","date":"2025-09-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"공동인증서 초기화","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0070","date":"2025-09-11","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)스타오토모빌","content":"계산서 발행 주소 변경 (로퍼계정)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0071","date":"2025-09-12","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계좌 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0072","date":"2025-09-15","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"렌탈케이","content":"이메일 정보 수정","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0073","date":"2025-09-15","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0074","date":"2025-09-16","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0075","date":"2025-09-16","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"렌탈케이","content":"마이그레이션 건수 문의","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0076","date":"2025-09-17","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 수정시 내용 노출 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0077","date":"2025-09-17","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"라이프컴즈","content":"최초 결제일 수정","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0078","date":"2025-09-17","channel":"채널톡","type":"오류","biz":"렌트카","co":"제이비/금봉 렌트카","content":"렌트카 오류 사항 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0079","date":"2025-09-17","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"렌탈케이","content":"고객목록 리스트 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0080","date":"2025-09-18","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"주소 검색 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / FRP내 오류가 아닌 일시적인 카카오 검색 오류인 것으로 추정","staff":"유소미"},{"id":"cs0081","date":"2025-09-19","channel":"채널톡","type":"오류","biz":"렌트카","co":"렌트투게더","content":"계약 내용 확인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0082","date":"2025-09-19","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동 발행으로 계약정보 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0083","date":"2025-09-19","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 > 고객정보 이메일 연동 안 됨","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0084","date":"2025-09-22","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초결제일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0085","date":"2025-09-22","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"미수관리에서 카드결제, CMS재실행 버튼 추가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0086","date":"2025-09-22","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"차량검색 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0087","date":"2025-09-22","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0088","date":"2025-09-23","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"퍼시픽렌터카(주)","content":"결제 예정일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0089","date":"2025-09-23","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"렌탈케이","content":"중복 계약 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0090","date":"2025-09-23","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"법인신용정보 조회 불가","status":"완료","sla":"3일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0091","date":"2025-09-25","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 취소 내용 확인","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0092","date":"2025-09-26","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"CMS 계좌이체 세금계산서 자동발행으로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0093","date":"2025-09-26","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"CMS 계좌이체 세금계산서 자동발행으로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0094","date":"2025-09-26","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"결제정보 변경(자동출금액 변경)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"김수아"},{"id":"cs0095","date":"2025-09-29","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"회사 대표 이메일 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"김수아"},{"id":"cs0096","date":"2025-09-30","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"최초결제일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0097","date":"2025-09-30","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"계약 승인 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0098","date":"2025-10-01","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"라이프컴즈","content":"현금영수증 자동발행 계약서 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0099","date":"2025-10-01","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"렌탈케이","content":"청구 안내 발송 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0100","date":"2025-10-02","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"CMS결제 실패 건들 [미수관리]에서 확인 불가능","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0101","date":"2025-10-02","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"개발 요청사항 접수","status":"완료","sla":"OK","memo":"개발요건 취합하여 견적서까지 발송 완료 되었으나 아직 회신 없음","staff":"유소미"},{"id":"cs0102","date":"2025-10-10","channel":"기타(로켓CS)","type":"삭제","biz":"일반 렌탈","co":"FRP(roper계정)","content":"중복 메모 삭제요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0103","date":"2025-10-10","channel":"기타(로켓CS)","type":"수정","biz":"일반 렌탈","co":"FRP(roper계정)","content":"[엔카] 세금계산서 발행을 위한 청구 스케줄 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0104","date":"2025-10-10","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"FRP(roper계정)","content":"CMS 재실행 오류 건(법적제한계좌 CMS 재실행건)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 기능 배포 전(10.23)","staff":"백지란"},{"id":"cs0105","date":"2025-10-13","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"단건 불할 청구 분할 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0106","date":"2025-10-13","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"렌탈 취소로 인한 계약 미수건 노출되지 않도록 수정","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0107","date":"2025-10-13","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"FRP(rop 테스트계정)","content":"이슈리스트 발송 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0108","date":"2025-10-13","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"FRP(roper계정)","content":"결제 불가 사유 최신 업데이트 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 기능 배포 전(10.23)","staff":"유소미"},{"id":"cs0109","date":"2025-10-13","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"렌탈케이","content":"결제완료건 미납으로 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0110","date":"2025-10-13","channel":"채널톡","type":"오류","biz":"바이크","co":"썬더크루","content":"MIS(경영리포트) 내용 확인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0111","date":"2025-10-15","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"기존 고객 추가 계약 건 정기 결제일에 진행되지 않고 미수관리로 노출","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 수기로 처리 완료 / 기능 배포 전(10.23)","staff":"유소미"},{"id":"cs0112","date":"2025-10-15","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0113","date":"2025-10-16","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"청구 상태 변경 요청(대기 > 미납)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0114","date":"2025-10-17","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"단건 불할 청구 분할 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0115","date":"2025-10-20","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"계약 완료 건 내용 변경 가능여부 문의(리딩 허송매니저) ","status":"완료","sla":"OK","memo":"김수아 파트장에게 허송매니저 유선 문의 / 안내 완료 (서명 완료건 수정불가)","staff":""},{"id":"cs0116","date":"2025-10-21","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티","content":"계약삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0117","date":"2025-10-21","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 발송 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0118","date":"2025-10-21","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 발행 오류(세금계산서 자동발행 기능)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0119","date":"2025-10-22","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행으로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0120","date":"2025-10-22","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 발송 내역 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0121","date":"2025-10-23","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"단건 결제정보 추가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0122","date":"2025-10-23","channel":"채널톡","type":"수정","biz":"바이크","co":"썬더크루","content":"휴면계정 해지","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0123","date":"2025-10-23","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 차량 옵션 추가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0124","date":"2025-10-23","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"차량 내장컬러 내용 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0125","date":"2025-10-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 중복 발행","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0126","date":"2025-10-24","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"중복 계약서 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0127","date":"2025-10-24","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0128","date":"2025-10-24","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0129","date":"2025-10-27","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"월렌트료 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0130","date":"2025-10-27","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동 발행 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0131","date":"2025-10-27","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0132","date":"2025-10-28","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"휴면계정 해지","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0133","date":"2025-10-28","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0134","date":"2025-10-29","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"패스트원","content":"CMS 승인 링크 전송 불가(엔드유저 수신 되지 않는 상태)","status":"완료","sla":"OK","memo":"CTO 문의 →  답변 완료","staff":"백지란"},{"id":"cs0135","date":"2025-10-29","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"패스트원","content":"CMS 승인 알림 채널 다각화 문의","status":"완료","sla":"OK","memo":"강태준 파트장 및 한솔PM 문의 / (현재는 카톡으로만 진행, SMS로도 진행 할 수 있도록 1.1버전 개발중)","staff":"백지란"},{"id":"cs0136","date":"2025-10-29","channel":"메일","type":"오류","biz":"일반 렌탈","co":"FRP(roper계정)","content":"품목등록 화면 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0137","date":"2025-10-29","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"렌탈케이","content":"1.1 배포 일정","status":"완료","sla":"OK","memo":"답변 완료","staff":"유소미"},{"id":"cs0138","date":"2025-10-30","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0139","date":"2025-10-30","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"정기 결제 청구 미발생","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0140","date":"2025-10-30","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"월렌트료 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0141","date":"2025-10-30","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"은행 입출금 내역 매칭 처리 취소 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 매칭 취소 기능 개발 예정","staff":"유소미"},{"id":"cs0142","date":"2025-10-30","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"청구 1회를 차월 렌탈료로 이동 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0143","date":"2025-10-30","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동 발행 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0144","date":"2025-10-31","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"계약자 정보 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0145","date":"2025-10-31","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0146","date":"2025-10-31","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"정기 결제 청구 미발생","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0147","date":"2025-11-03","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0148","date":"2025-11-04","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"한국조명","content":"CMS 자동이체 연결 오류","status":"완료","sla":"OK","memo":"답변 완료","staff":"유소미"},{"id":"cs0149","date":"2025-11-04","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"청구 분할 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0150","date":"2025-11-04","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0151","date":"2025-11-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"(주)사운드그래프","content":"미납 출금 불가","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0152","date":"2025-11-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 발행 취소","status":"완료","sla":"OK","memo":"업체에서 해당 계약내용을 삭제하여 내용 확인이 되지 않음 / 직접 삭제로 안내 완료","staff":"유소미"},{"id":"cs0153","date":"2025-11-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제 요청 금액 한도 초과로 결제 불가","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료 / 효성을 통해 한도 올리는 방법 안내 완료","staff":"유소미"},{"id":"cs0154","date":"2025-11-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"팝빌 가입 문의","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0155","date":"2025-11-04","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"(주)스타오토모빌","content":"가입완료' 전 1회차 입금 완료 확인 후 가입 승인 할 수 있도록 청구 생성","status":"완료","sla":"OK","memo":"해당 내용으로 프로세스 변경 불가 안내 완료 / 차선책 안내 예정","staff":"유소미"},{"id":"cs0156","date":"2025-11-05","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티2","content":"은행 입출금 내역 조회 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0157","date":"2025-11-05","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"CMS요청 문자 발송 불가능","status":"완료","sla":"OK","memo":"고객의 입력 오류로 안내 완료","staff":"유소미"},{"id":"cs0158","date":"2025-11-05","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"분할 청구 건 병합 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0159","date":"2025-11-05","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"한국조명","content":"CMS 발송 오류","status":"완료","sla":"OK","memo":"트렐로 접수 후 처리 완료 / 실시간CMS 서비스 이용변동 신청 완료 아직 승인 전","staff":"백지란"},{"id":"cs0160","date":"2025-11-06","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"지티에스앤","content":"중복계정 삭제 요청","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"백지란"},{"id":"cs0161","date":"2025-11-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"정기건 일시납으로 추가 청구 생성 되지 않도록 요청","status":"완료","sla":"OK","memo":"정기 청구에서 수기로 [납부완료 변경] 처리 안내 완료 / 청구가 생성되지 않도록 처리 가능 여부 개발실에 확인 했으나 불가 답변","staff":"유소미"},{"id":"cs0162","date":"2025-11-07","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0163","date":"2025-11-07","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0164","date":"2025-11-07","channel":"대표전화","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"CMS 가입 안내 절차 문의","status":"완료","sla":"OK","memo":"응대완료(11.07 담당자에게 mail로 효성cms 가입 절차 안내 완료)","staff":"유소미"},{"id":"cs0165","date":"2025-11-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"렌탈케이","content":"메뉴얼 요청 및 기초상품 일괄 등록 문의","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0166","date":"2025-11-10","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 중복발행 IP 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 수동발행을 하게 되면 자동발행으로 이중발행이 되지 않도록 긴급 배포(11.11)","staff":"유소미"},{"id":"cs0167","date":"2025-11-10","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행 및 자돝발행 체크박스 비활성화 문의","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 체크박스 비활성화는 프로그램 오류 / 배포 일정 확인 필요함","staff":"유소미"},{"id":"cs0168","date":"2025-11-11","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0169","date":"2025-11-11","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"CMS카드결제 진행 안 되어짐 이슈","status":"완료","sla":"OK","memo":"민석PO 확인 중 / CMS카드, 계좌이체 동일하게 1.0에서 2시, 1.1에서 2시반 결제 되어지며 해당 내용은 CS로켓쳇 방에서 민석PO 답","staff":"유소미"},{"id":"cs0170","date":"2025-11-12","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티2","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0171","date":"2025-11-12","channel":"기타(로켓CS)","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"계약완료' 계약서 렌트료 수정후 수정 된 금액으로 청구","status":"진행 중","sla":"","memo":"개발실 확인 중 / 한 계약서의 여러 물품을 등록하여 '계약완료' > 중에 물품 일부 취소 > 일부 취소 된 물품의 렌트료만 제외하여 수정 된 ","staff":"백지란"},{"id":"cs0172","date":"2025-11-12","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"엔카","content":"1.1버전 로그인 문의","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0173","date":"2025-11-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"법인계약서 작성시 생년월일 입력 문의","status":"완료","sla":"OK","memo":"[계약서 미리보기 및 발송]에서 최하단 생년월일(법인일경우) 대표자 생년월일 안내 완료","staff":"유소미"},{"id":"cs0174","date":"2025-11-13","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"엔드유저 알림 문자 발송 오류","status":"완료","sla":"OK","memo":"","staff":"유소미"},{"id":"cs0175","date":"2025-11-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"렌탈케이","content":"재고 매입 금액 최대 한도 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 민석PO 트렐로 답변 확인 완료 / 1.0, 1.1 동일하며 이상 금액 입력이 필요할 경우 추가 개발 안내","staff":"유소미"},{"id":"cs0176","date":"2025-11-14","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티2","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":""},{"id":"cs0177","date":"2025-11-17","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"더조각","content":"엔드유저 알림 문자 발송 오류","status":"완료","sla":"OK","memo":"","staff":""},{"id":"cs0178","date":"2025-11-18","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽모빌리티2","content":"개발 요청사항 접수","status":"완료","sla":"OK","memo":"김수아파트장 업체와 직접 소통 / 개발 비용 안내 후 의사결정 기다리는 중 / 회신 없음","staff":"유소미"},{"id":"cs0179","date":"2025-11-19","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동 발행으로 수정","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0180","date":"2025-11-19","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"CMS계좌 변경 문의","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0181","date":"2025-11-19","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"더조각","content":"담당자 정보 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0182","date":"2025-11-19","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"주식회사 메디컬프랜즈","content":"프리핀스 이용문의","status":"완료","sla":"OK","memo":"단순문의로 즉시 응대 완료 / 업업팀에 내용 전달 완료","staff":"유소미"},{"id":"cs0183","date":"2025-11-20","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"퓨어코스메틱","content":"세금계산서 자동 발행 설정 취소 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0184","date":"2025-11-21","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"한국기업렌탈","content":"기고객 등록 방법","status":"완료","sla":"OK","memo":"1.1노션 메뉴얼 링크 공유 완료 / 업체와 유선 소통 완료","staff":"유소미"},{"id":"cs0185","date":"2025-11-25","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0186","date":"2025-11-25","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동발행으로 변경","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0187","date":"2025-11-25","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0188","date":"2025-11-25","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"정기결제일 변경 후 청구 확인","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0189","date":"2025-11-25","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"계약진행중' 건의 총 렌탈료 합계, 남은 렌탈료 합계 확인 문의","status":"완료","sla":"OK","memo":"추가 신규 개발건으로 접수 완료(범용)","staff":"유소미"},{"id":"cs0190","date":"2025-11-26","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"월렌탈료 청구 상이","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0191","date":"2025-11-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"CMS 타인명의 결제","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / CMS를 통한 결제는 무조건 본인 명의를 통한 결제 수단만 결제 가능 안내","staff":"유소미"},{"id":"cs0192","date":"2025-11-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"계약서 내용 변경 문의","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / 계약서 내용 변경 같은 경우 개발사항으로 비용이 발생할 수 있으며, '특약사항'으로 작성 및 수정하는 방법","staff":"유소미"},{"id":"cs0193","date":"2025-11-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"연체 고객 청구 중지 문의(CMS 초기화 없이)","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / CMS 초기화를 진행하지 않고 청구 정지는 불가능 안내","staff":"유소미"},{"id":"cs0194","date":"2025-11-27","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행 취소 수정","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0195","date":"2025-11-27","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"퍼시픽렌터카(주)","content":"배차완료' 불가 팝업","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0196","date":"2025-11-27","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 발행 취소 및 자동 발행 취소 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0197","date":"2025-11-27","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"아이티라이프","content":"프리핀스 이용 문의","status":"완료","sla":"OK","memo":"영업팀으로 이관 완료","staff":"유소미"},{"id":"cs0198","date":"2025-12-01","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0199","date":"2025-12-01","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"(주)스타오토모빌","content":"계약번호로 계약 검색 기능 가능 여부 확인 요청","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중","staff":"유소미"},{"id":"cs0200","date":"2025-12-01","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"최초 결제일 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0201","date":"2025-12-02","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0202","date":"2025-12-02","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"미수결제 불가","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / 해당 계약의 CMS 승인이 되지 않아 결제 불가 안내","staff":"유소미"},{"id":"cs0203","date":"2025-12-02","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"신용정보조회 이후 프리핀스 로그인 페이지로 연결 되는 오류 확인 요청","status":"완료","sla":"3일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0204","date":"2025-12-03","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"신용정보 조회 불가 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0205","date":"2025-12-03","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제 불가 사유 '기타오류'가 노출 되는 경우 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 효성 확인 결과 잔액부족으로 노출되는 오류 코드로 확인 및 안내 완료","staff":"유소미"},{"id":"cs0206","date":"2025-12-03","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"신용정보 조회 생년월일 불일치 내용 확인","status":"완료","sla":"OK","memo":"효성, 프리핀스(트렐로) 동시 내용 확인 완료 / 해당 카드사에 문의 후 정확한 생년월일 파악이 필요 안내 완료","staff":"유소미"},{"id":"cs0207","date":"2025-12-03","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0208","date":"2025-12-03","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0209","date":"2025-12-09","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"일괄 납부완료 처리 가능 여부","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / 일괄 납부완료 처리 불가능 / 수기로 [납부완료] 처리로 안내","staff":"유소미"},{"id":"cs0210","date":"2025-12-09","channel":"기타(로켓CS)","type":"단순 문의","biz":"렌트카","co":"엔카","content":"면허 진위여부 조회 이력 관리(조회 결과 노출,구청 실사시 필요)","status":"완료","sla":"1일초과","memo":"CTO님 직접 문의 / 12.11 배포 예정 / 12일 운영계 반영 확인(면허진위여부 조회 날짜 데이터값 노출 되도록 개선 개발) / 처리 완료","staff":"유소미"},{"id":"cs0211","date":"2025-12-09","channel":"메일","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"상담탭 내용 Mig X, 담당자정보 확인 불가능 확인 요청","status":"완료","sla":"OK","memo":"계약 기준 내용 Mig ","staff":"김수아"},{"id":"cs0212","date":"2025-12-09","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"미수고객 결제 이력, 결제 불가 사유 확인 불가","status":"완료","sla":"OK","memo":"처리 완료","staff":"김수아"},{"id":"cs0213","date":"2025-12-09","channel":"메일","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"계약기간 36개월로 변경 및 총 금액 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"김수아"},{"id":"cs0214","date":"2025-12-09","channel":"기타(로켓CS)","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"로그인 불가","status":"완료","sla":"OK","memo":"처리 완료","staff":"김수아"},{"id":"cs0215","date":"2025-12-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"CMS카드결제 등록 방법","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료","staff":"유소미"},{"id":"cs0216","date":"2025-12-10","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"상담 탭 - 고객정보 휴대폰번호, 이메일 미노출 / 고객목록 -고객정보 상세에서는 확인되지않음 ","status":"완료","sla":"OK","memo":"9일에 인입되었던 건 과 동일한 내용 / 개발실에서 고객목록에만 이메일 노출 연동 / 상담탭, 고객목록 - 상세정보 에도 연동 필요 ","staff":"김수아"},{"id":"cs0217","date":"2025-12-10","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"계약 - 뷰티스노우 배송비 추가건 누락 ","status":"완료","sla":"OK","memo":"","staff":"김수아"},{"id":"cs0218","date":"2025-12-11","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"법인 신용정보 조회 불가 팝업","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중 / 12월말 내용 처리 될 예정 / 그 전까지 같은 건으로 인입시 즉시 처리 예정 / 고객사 안내 완료","staff":"유소미"},{"id":"cs0219","date":"2025-12-11","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"재고 데이터 확인 불가","status":"진행 중","sla":"","memo":"11일 오전 퓨어코스메틱을 포함한 1.1 고객사 5곳 재고 데이터 확인 예정","staff":"유소미"},{"id":"cs0220","date":"2025-12-11","channel":"기타(로켓CS)","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"청구일에 결제가 이루어지는 오류(Roper > 고객사)","status":"진행 중","sla":"","memo":"긴급 배포 건으로 진행 중 / 개발실 확인 중","staff":"유소미"},{"id":"cs0221","date":"2025-12-11","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"(주)스타오토모빌","content":"CMS 승인 상태 확인 방법 안내 요청","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료","staff":"유소미"},{"id":"cs0222","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0223","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0224","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0225","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0226","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0227","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0228","date":"2025-12-11","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"최초 결제일 변경 요청 → 완료된 계약건의 변경 원칙의 예외 적용으로 작업 취소","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0229","date":"2025-12-12","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"패스트원","content":"정기 계약건 결제정보 '단기'등 결제스케줄 생성 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 1.1 데이터 이관하면서 해당 내용으로 수정 완료 ","staff":"유소미"},{"id":"cs0230","date":"2025-12-15","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동발행 적용 요청","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0231","date":"2025-12-15","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"결제 정보 오류 및 결제 오류 ","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 나머지 금액 청구 생성 확인","staff":"유소미"},{"id":"cs0232","date":"2025-12-16","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"보증금 금액 수정 요청","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / '계약완료'된 건으로 계약서 재작성으로 안내","staff":"유소미"},{"id":"cs0233","date":"2025-12-16","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"미수 데이터 확인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0234","date":"2025-12-16","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0235","date":"2025-12-17","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0236","date":"2025-12-18","channel":"채널톡","type":"삭제","biz":"렌트카","co":"(주)스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0237","date":"2025-12-18","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"1.1 링크 문의","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료","staff":"유소미"},{"id":"cs0238","date":"2025-12-18","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"현금영수증 취소 요청","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료","staff":"유소미"},{"id":"cs0239","date":"2025-12-18","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"미수에서 CMS재실행 내역 확인 불가","status":"완료","sla":"2일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0240","date":"2025-12-18","channel":"채널톡","type":"수정","biz":"렌트카","co":"(주)스타오토모빌","content":"계약서 '대여료 연체' 내용 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 중 / 해당 내용은 계약서 커스터마이징 개발 사항으로 개발 비용 발생을 안내 / 스타오토모빌 내부적인 의사결정 필요 / ","staff":"유소미"},{"id":"cs0241","date":"2025-12-18","channel":"대표전화","type":"단순 문의","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"유입경로 데이터 이관X 확인 필요","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 후 처리 완료 / 차주 1.1 '유입경로' 수정 배포 진행 / 배포 후 '유입경로' Mig 진행","staff":"유소미"},{"id":"cs0242","date":"2025-12-19","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동 발행 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0243","date":"2025-12-19","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"CMS 승인 상태 확인 요청","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0244","date":"2025-12-22","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"CMS재실행 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 리버스헬스케어 미수 CMS재결재 이력 확인 불가와 동일한 현상 / 수요일(24일)배포 후 목요일(25일)부터 확","staff":"유소미"},{"id":"cs0245","date":"2025-12-22","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"렌탈 중단으로 인한 계약 종료 문의","status":"완료","sla":"OK","memo":"렌탈 종료 또는 종료에 따른 계약 상태값 변경 필트 추가 개발 요청 완료(신규) / 고객사 안내 완료","staff":"유소미"},{"id":"cs0246","date":"2025-12-22","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제 실패 사유 '카드사 전화 요망' 사유 확인 요청 ","status":"완료","sla":"OK","memo":"","staff":"유소미"},{"id":"cs0247","date":"2025-12-23","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0248","date":"2025-12-23","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"렌탈 중단으로 인한 CMS 초기화 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / CMS초기화 버튼 1.1 배포 12월30일 일정 확인","staff":"유소미"},{"id":"cs0249","date":"2025-12-23","channel":"채널톡","type":"오류","biz":"렌트카","co":"(주)스타오토모빌","content":"이슈리스트 노출 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 이슈리스트는 이력 관리 및 문자 발송 기능으로 처리가 된 건들도 노출 되게끔 되어 있으며 해당 기능은 수정 및 ","staff":"유소미"},{"id":"cs0250","date":"2025-12-23","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"(주)리버스헬스케어","content":"계약 삭제 불가 오류","status":"완료","sla":"OK","memo":"처리 완료","staff":"유소미"},{"id":"cs0251","date":"2025-12-23","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"계약 삭제 불가 오류","status":"완료","sla":"1일초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0252","date":"2025-12-24","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"지티에스앤","content":"계약 휴대폰번호 오입력 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 임의값으로도 저장 될 수 있게끔 수정 완료 / 고객사 안내 완료","staff":"유소미"},{"id":"cs0253","date":"2025-12-24","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"토탈리빙","content":"앤드 유저 문자 오발송","status":"완료","sla":"OK","memo":"앤드 유저 사과 문자 발송 완료","staff":"유소미"},{"id":"cs0254","date":"2025-12-24","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"토탈리빙","content":"계정 비밀번호 초기화","status":"완료","sla":"OK","memo":"처리 완료","staff":"유소미"},{"id":"cs0255","date":"2025-12-24","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"토탈리빙","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0256","date":"2025-12-26","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"패스트원","content":"결제 되지 못한 금액 단건으로 청구 생성 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0257","date":"2025-12-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"토탈리빙","content":"처리 내용 전산 확인 문의","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료","staff":"유소미"},{"id":"cs0258","date":"2025-12-26","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"리버스헬스케어","content":"세이프티키 발급 후 신용점수 확인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0259","date":"2025-12-26","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티(주)","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0260","date":"2025-12-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"파일 업로드 용량 개선 문의","status":"완료","sla":"OK","memo":"단순 문의 건으로 즉시 대응 완료 / 시스템상 10개 이상업로드 제한을 두고 있으며 계약 파일 업로드가 필요하시면 압춥하여 업로드로 안내","staff":"김수아"},{"id":"cs0261","date":"2025-12-26","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"법인신용정보 조회 불가","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중 / CS로켓쳇 업로드 후 확인 대기 중 / 일시적으로 조회 가능하게끔 처리 완료 / 31일 수정 배포 예정 고객사 안","staff":"유소미"},{"id":"cs0262","date":"2025-12-29","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 자동 발행으로 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0263","date":"2025-12-29","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동 발행으로 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0264","date":"2025-12-29","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"사운드그래프","content":"공동인증서 재등록 오류","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 재등록 오류 확인 기능 수정 배포 일정 필요 / 고객사는 현재 정상 조회 됨","staff":"유소미"},{"id":"cs0000","date":"2025-11-26","channel":"프리핀스 담당자","type":"개선 요청","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 - 공동계약자 , 연대보증인 항목 추가 요청  (현재 3개의 계정 이용중 / 신규상품 오픈예정으로 해당 항목이 필수적으로 필요 / 개발비 부담의사 있음)","status":"진행 중","sla":"","memo":"관련 기획(1월 20일 완료 요청) 테스트 후 운영계 반영까지 1월 29일 이후 예상","staff":"김수아"},{"id":"cs0001","date":"2025-12-01","channel":"채널톡","type":"개선 요청","biz":"렌트카","co":"(주)스타오토모빌","content":"계약번호로 계약 검색 기능 가능 여부 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0002","date":"2026-01-02","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽모빌리티","content":"CMS출금일 오입력건 변경 요청(CT0000037)","status":"완료","sla":"OK","memo":"","staff":"한진선"},{"id":"cs0003","date":"2026-01-02","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽모빌리티","content":"미납처리 변경 후 결제일 수정 요청건(CT0000044)","status":"완료","sla":"OK","memo":"","staff":"한진선"},{"id":"cs0004","date":"2026-01-02","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"최초결제일 변경 요청건(CT0000208)","status":"완료","sla":"OK","memo":"","staff":"한진선"},{"id":"cs0005","date":"2026-01-02","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽모빌리티","content":"CMS 재결제 시도 요청건 (CT0000005)","status":"완료","sla":"OK","memo":"","staff":"한진선"},{"id":"cs0006","date":"2026-01-02","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"계약입력 관련 방법 문의 ","status":"완료","sla":"OK","memo":"","staff":"한진선"},{"id":"cs0007","date":"2026-01-02","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"더조각","content":"개인사업자 계약서 미리보기 성별-남자로 Default설정건","status":"완료","sla":"8일 초과","memo":"[수정요청건으로 처리 필요] 구두로 강태준 팀장, 공민석PO님께 설명","staff":"한진선"},{"id":"cs0008","date":"2026-01-05","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0009","date":"2026-01-05","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제불가 사유 확인 요청(1회 사용한도액 초과)","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0010","date":"2026-01-05","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"정기 결제일 변경 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0011","date":"2026-01-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"최초결제일 변경 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0012","date":"2026-01-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"배송수단' 필수 입력 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0013","date":"2026-01-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"CMS 연결 후 청구 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0014","date":"2026-01-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"고객 등록시 이메일 필수값 제외 요청","status":"완료","sla":"OK","memo":"임의값으로 작성 가능을 안내 완료","staff":"유소미"},{"id":"cs0015","date":"2026-01-06","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"12월 청구 2개 생성 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당","staff":"유소미"},{"id":"cs0016","date":"2026-01-06","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"뒤로가기 후 전 리셋 기능 개선 요청","status":"완료","sla":"11일초과","memo":"트렐로에 접수 후 처리 완료 / 01.22 배포 / 확인 및 고객사 안내 완료","staff":"유소미"},{"id":"cs0017","date":"2026-01-06","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"일반 계좌 / 카드에 경우 결제정보 필수값 제외 개선 요청","status":"완료","sla":"11일초과","memo":"결제 정보 등록하지 않고 계약 체결 후 확인 된 결제 정보를 결제 수정에서 입력할 수 있도록 안내 완료","staff":"유소미"},{"id":"cs0018","date":"2026-01-06","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"계약 저장시 팝업 알림","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0019","date":"2026-01-06","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"세금계산서 중복 발행 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 내용은 중복발행이 맞으며 1.1로 데이터를 이관하는 과정에서 발생한 오류 / 해당 건 외에 중복발행 된 세","staff":"유소미"},{"id":"cs0020","date":"2026-01-07","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"2일초과","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0021","date":"2026-01-07","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"청구 엑셀 다운로드시 세금계산서, 현금영수증 발급여부 기능 개선 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / FRP 기능 개선으로 접수로 안내 / 현재 다소 시간이 걸릴 수 있다는 안내 완료 ","staff":"유소미"},{"id":"cs0022","date":"2026-01-07","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"GTSN","content":"고객 검색시 조회 불가 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 내용은 GTSN쪽에서 직접 입력 기능을 인지하지 못하여 안내 완료","staff":"유소미"},{"id":"cs0023","date":"2026-01-07","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"계약 저장시 팝업 알림","status":"완료","sla":"9일초과","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0024","date":"2026-01-07","channel":"채널톡","type":"개선 요청","biz":"렌트카","co":"스타오토모빌","content":"미납 통행료 조회' 수기 등록시 수기로 차량번호 등록할 수 있도록 개선 요청","status":"완료","sla":"OK","memo":"현재 개발 불가 양해 안내 완료 / 현재 내부적으로 렌터카 기능 개발 보류","staff":"유소미"},{"id":"cs0025","date":"2026-01-07","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽렌터카","content":"개인사업자 > 개인으로 계약 정보 변경 가능 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0026","date":"2026-01-07","channel":"채널톡","type":"오류","biz":"렌트카","co":"스타오토모빌","content":"차량 일괄 등록 불가 확인 요청","status":"완료","sla":"OK","memo":"이미 등록 된 차량을 작성하여 업로드 한 내용으로 발생한 오류로 개발실 확인 / 해당 내용 업체 안내 완료","staff":"유소미"},{"id":"cs0027","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"미수고객 CMS재실행 불가 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 앤드 유저의 CMS가 연결 되지 않음 / 리버스헬스케어 내부적으로 해지 고객임을 확인","staff":"유소미"},{"id":"cs0028","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"사운드그래프","content":"로그인 불가 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 1.1 운영 로그인 링크 전달 후 로그인 가능 확인 완료","staff":"유소미"},{"id":"cs0029","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 발급 후 취소에 따른 로그 확인 요청","status":"완료","sla":"OK","memo":"데이터 이관 과정에서 발생한 세금계산서, 현금영수증 중복 발행 취소 처리 과정에서 발생한 클레임으로 공식 사과 문자(앤드 유저에게) 발송 완료","staff":"유소미"},{"id":"cs0030","date":"2026-01-08","channel":"프리핀스 담당자","type":"개선 요청","biz":"렌트카","co":"퍼시픽렌터카","content":"가상계좌 연결 개발 요청","status":"진행 중","sla":"","memo":"개발 착수 가능 여부 확인 필요","staff":"유소미"},{"id":"cs0031","date":"2026-01-08","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"은행 입출금 내역 조회 불가 확인 요청","status":"완료","sla":"OK","memo":"현재 정상 작동 확인(개발실) / 고객사쪽에 다시 시도 요청 완료","staff":"유소미"},{"id":"cs0032","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증, 세금계산서 중복 발행 된 앤드 유저 공식 안내 및 사과 문자 발송 요청","status":"완료","sla":"OK","memo":"CS 로켓으로 해당 내용 접수 완료 / 세금계산서 및 현금영수증 중복 발행으로 인해 해당 내용 개발실 처리 중 발행, 취소 관련하여 알림 문자가","staff":"유소미"},{"id":"cs0033","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"계약서 작성 방법 안내 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0034","date":"2026-01-08","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리피즈","content":"팩토링 심사 관련 진행 상황 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0035","date":"2026-01-09","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0036","date":"2026-01-09","channel":"채널톡","type":"개선 요청","biz":"렌트카","co":"퍼시픽렌터카","content":"계약완료' 이후 이메일, 주소 변경 가능하게끔 비활성화 해지 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0037","date":"2026-01-09","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"페스트원","content":"계약완료' 이후 이메일 변경 가능하게끔 비활성화 해지 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0038","date":"2026-01-09","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"페스트원","content":"1.1 유지보수 탭 오픈 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 기능 개발실 오픈 일정 확인 후 고객사 안내 예정","staff":"유소미"},{"id":"cs0039","date":"2026-01-09","channel":"프리핀스 담당자","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"재고 수량 수정","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0040","date":"2026-01-09","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"페스트원","content":"법인 계약 CMS 연결 개선","status":"완료","sla":"OK","memo":"현재 CMS 연결 같은 경우 본인 명의로 된 결제 수단만 등록 가능함을 안내","staff":"유소미"},{"id":"cs0041","date":"2026-01-09","channel":"프리핀스 담당자","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"배송 완료'시 앤드 유저 알림 문자 발송 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0042","date":"2026-01-09","channel":"프리핀스 담당자","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"회수유형 '계약연장' 설정시 자동 연장 기능 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 기능 정책 확정 필요하여 개선 예정","staff":"유소미"},{"id":"cs0043","date":"2026-01-12","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"은행 입출금 내역 조회 불가 확인 요청","status":"완료","sla":"6일 초과","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0044","date":"2026-01-12","channel":"프리핀스 담당자","type":"삭제","biz":"렌트카","co":"엔카","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0045","date":"2026-01-12","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카","content":"차량 목록 추가 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0046","date":"2026-01-13","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"CMS 초기화 이후 출금 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / FRP 시스템 오류로 개발실 확인 / 해당 고객에게 프리핀스쪽에서 선환불 및 사과 안내 문자 발송 처리 완료 /","staff":"유소미"},{"id":"cs0047","date":"2026-01-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"중복출금신청' 사유 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0048","date":"2026-01-13","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽렌터카","content":"보증금 오입력으로 인한 내용 수정","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 결제 관련 오입력은 계약서 재작성으로 안내 완료 ","staff":"유소미"},{"id":"cs0049","date":"2026-01-13","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0050","date":"2026-01-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"CMS 오출금 관련하여 앤드 유저에게 사과 문자 발송 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 앤드 유저에게 사과 및 안내 문자 발송 완료 / 이후 현대아이티 정산 리마인드 필요","staff":"유소미"},{"id":"cs0051","date":"2026-01-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"GTSN","content":"전자계약 발송 취소 및 회수 가능 기능 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0052","date":"2026-01-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"GTSN","content":"지류 계약서 승인 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0053","date":"2026-01-14","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"오출금 된 앤드 유저 9회차 청구 '대기' 상태로 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0054","date":"2026-01-14","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 취소 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0055","date":"2026-01-14","channel":"대표전화","type":"단순 문의","biz":"일반 렌탈","co":"전남개발공사","content":"렌탈 전환 상담 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0056","date":"2026-01-14","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"미납 통행료 자동 차량 조회 기능 연동","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 하이패스 계정 등록 후 자동 조회 가능하나 매일 새벽 3시에 돌기 때문에 익일 확인 가능함을 안내 완료","staff":"유소미"},{"id":"cs0057","date":"2026-01-14","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"결제완료 된 청구 '잔액부족'으로 상태 노출 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 정상 결제 확인 완료 및 '정상처리'로 수정 예정 고객사 안내 완료","staff":"유소미"},{"id":"cs0058","date":"2026-01-15","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"CMS 정상 연결 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 정상 승인 확인 완료 및 새로 고침 요청","staff":"유소미"},{"id":"cs0059","date":"2026-01-15","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"CMS 정상 연결 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0060","date":"2026-01-15","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"고객 검색 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 노션 매뉴얼 링크 전달 완료","staff":"유소미"},{"id":"cs0061","date":"2026-01-15","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"로밍시간이 너무 길어져 불편 발생, 내용 확인 및 개선 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 부하가 걸린 내용은 따로 없었으며 프리핀스쪽에서 확인할 수 있는 부분은 없음을 안내 완료 / 고객사쪽에서 동일한","staff":"유소미"},{"id":"cs0062","date":"2026-01-15","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"렌탈 진행중인 고객의 렌탈료 합계 확인 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 현재는 확인 불가 안내 완료","staff":"유소미"},{"id":"cs0063","date":"2026-01-15","channel":"프리핀스 담당자","type":"개선 요청","biz":"금융","co":"유소미","content":"금융 페이지 최신 순 최상단에서 확인 가능하게끔 기능 수정 요청","status":"완료","sla":"14일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0064","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"FRP 공통","co":"유소미","content":"잔여 렌탈료 합계 정확도 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0065","date":"2026-01-15","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 중복 발행 확인 요청","status":"완료","sla":"OK","memo":"","staff":"유소미"},{"id":"cs0066","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"더조각","content":"카드결제 지출증빙 오발급 발생(개발실 선 확인)","status":"완료","sla":"OK","memo":"처리 완료","staff":"유소미"},{"id":"cs0067","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"페스트원","content":"지출증빙 중복 발행 발생(개발실 선 확인)","status":"완료","sla":"OK","memo":"처리 완료","staff":"유소미"},{"id":"cs0068","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"더조각","content":"개인사업자 계약서 미리보기 성별-남자로 Default설정건","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0069","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"더조각","content":"CMS 정상 연결 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0070","date":"2026-01-15","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"더조각","content":"계약서 다운로드 시 '채권유동화여부' 상이하게 표시 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0071","date":"2026-01-16","channel":"프리핀스 담당자","type":"수정","biz":"일반 렌탈","co":"더조각","content":"세금계산서 자동 발행 해재 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 내용 1.1에선 고객사에서 직접 수정 가능하게끔 기능 확인되어 안내 완료","staff":"유소미"},{"id":"cs0072","date":"2026-01-16","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"로밍시간이 너무 길어져 불편 발생, 내용 확인 및 개선 요청","status":"완료","sla":"5일 초과","memo":"메일로 개발실 요청(CBO님>개발실) / 강태준팀장님 이폼싸인 확인 결과, 동일한 현상이 확인 되지 않아 처리는 어려우며 프리핀스 계약서 용량이","staff":"유소미"},{"id":"cs0073","date":"2026-01-16","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"미납 통행료 자동 조회 정상 작동 확인 요청","status":"완료","sla":"7일 초과","memo":"트렐로에 접수 후 처리 완료 / 01.29일 처리 예정 / 고객사 안내 완료 / 이파인 법인 등록 완료 및 개발실 처리 중(최대 1일 소요)","staff":"유소미"},{"id":"cs0074","date":"2026-01-16","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"더조각","content":"연체 이자율 자동 계산 기능","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중 / 신규 개발 건으로 접수 완료","staff":"유소미"},{"id":"cs0075","date":"2026-01-16","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"계약서 재작성 여부(확정일자)","status":"완료","sla":"OK","memo":"리딩 허송대리 확인 결과, 이번 건에 한해 계약서 재작성 불필요 확인 / 고객사 안내 완료","staff":"유소미"},{"id":"cs0076","date":"2026-01-19","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"미수에서 카드결제 불가 오류 알림 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0077","date":"2026-01-20","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"넥스","content":"데이터 일괄 업로드 엑셀 파일 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 ","staff":"유소미"},{"id":"cs0078","date":"2026-01-21","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"[납부 완료 변경] 버튼이 마스터 계정으로 로그인 하여도 보이지 않음","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0079","date":"2026-01-21","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"넥스","content":"마이그레이션 파일 필드에 대한 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0080","date":"2026-01-22","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽렌터카","content":"고객정보에서 변경된 내용 계약에서의 연동 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 고객정보에서 수정 된 내용은 계약에서 연동은 되지 않고 있지만 수정 된 내용으로 해당 고객님께 알림이 가는 것으","staff":"유소미"},{"id":"cs0081","date":"2026-01-22","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"계약 작성시 이메일 필수값 제외","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 전자계약을 진행해야하기 때문에 필수값 제외는 현재 불가능하며 임의값으로 작성 요청 완료","staff":"유소미"},{"id":"cs0082","date":"2026-01-22","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"뒤로가기 후 전 리셋 기능 개선 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 01.22 배포 / 확인 및 고객사 안내 완료","staff":"유소미"},{"id":"cs0083","date":"2026-01-22","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0084","date":"2026-01-22","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱(앤드 유저)","content":"제품 설치전 신용 점수 변경에 따른 변동 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0085","date":"2026-01-23","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 ","staff":"유소미"},{"id":"cs0086","date":"2026-01-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리피즈","content":"금융 심사 결과 확인 요청","status":"완료","sla":"OK","memo":"RX그룹에 전달완료 / 리딩에서 거절 결과 확인 / 영업담당자(백지란팀장님) 관련 내용 유선 연락 안내 완료","staff":"한진선"},{"id":"cs0087","date":"2026-01-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"고객정보 (계좌정보) FRP 내 확인가능 여부 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"한진선"},{"id":"cs0088","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"미수 고객 재결제 시도 시, '은행시스템장애'로 표시되는 경우의 대한 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0089","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"정기 결제일이 주말이였을 때 결제 확인 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 1.0 버전에서는 효성CMS 단독 연계로 주말 실시간 결제가 가능했으나, 1.1 버전부터는 여러 CMS사와의 연","staff":"유소미"},{"id":"cs0090","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"계약서 서명을 완료 했음에도 '서명대기'상태로 보여지며 확인 요청","status":"완료","sla":"OK","memo":"개발실 '계약완료'로 상태 변경 처리 완료 / 해당 사유 개발실 확인 중","staff":"유소미"},{"id":"cs0091","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"넥스","content":"마이그레이션 파일 필드에 대한 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0092","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"넥스","content":"계약 마이그레이션 요청","status":"접수","sla":"","memo":"계약 파일 수정 요청 완료 / 고객사 회신 없음","staff":"유소미"},{"id":"cs0093","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"정상 결제 처리 확인 요청","status":"완료","sla":"OK","memo":"PG 결제건으로 당사에서 내부 품의 후 선입금 해주는 방식으로 안내 / 현재 PG결제는 퓨어코스메틱의 해당 청구 건 1개로 개발실 확인 완료 /","staff":"유소미"},{"id":"cs0094","date":"2026-01-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"앤드 유저 청구 '대기' 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0095","date":"2026-01-26","channel":"","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"청구 탭 필터 추가 요청","status":"완료","sla":"11일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0096","date":"2026-01-26","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"계약서 생년월일 수정 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 계약서 최하단의 생년월일 같은 경우, 전자 계약서 발송 후 해당 고객님이 직접 입력하는 방식으로 진행 안내 완료","staff":"유소미"},{"id":"cs0097","date":"2026-01-26","channel":"채널톡","type":"수정","biz":"렌트카","co":"스타오토모빌","content":"최초 결제일 변경 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0098","date":"2026-01-27","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽모빌리티","content":"계약 삭제","status":"완료","sla":"1일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0099","date":"2026-01-28","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"청구 매칭 취소 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0100","date":"2026-01-29","channel":"채널톡","type":"단순 문의","biz":"","co":"?","content":"프리핀스 도입 문의 ","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0101","date":"2026-01-29","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"결제 예정일에 결제가 진행되지 않음","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0102","date":"2026-01-29","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0103","date":"2026-01-29","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"세금계산서 발행 버튼 미노출","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0104","date":"2026-01-29","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"월 결제 금액 상이","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0105","date":"2026-01-29","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"페스트원","content":"청구 미생성 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0106","date":"2026-01-29","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"페스트원","content":"세금계산서 자동 발행으로 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0107","date":"2026-01-29","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"유소미","content":"청구 미생성 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0108","date":"2026-01-29","channel":"프리핀스 담당자","type":"수정","biz":"일반 렌탈","co":"유소미","content":"청구 금액 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0109","date":"2026-01-30","channel":"채널톡","type":"단순 문의","biz":"","co":"정범진","content":"원천징수 영수증 요청","status":"완료","sla":"OK","memo":"처리 완료 / 원서윤PO님 전달 완료","staff":"유소미"},{"id":"cs0110","date":"2026-01-30","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"렌탈 상품 미노출","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0111","date":"2026-01-30","channel":"채널톡","type":"단순 문의","biz":"","co":"김제욱","content":"원천징수 영수증 요청","status":"완료","sla":"OK","memo":"처리 완료 / 원서윤PO님 전달 완료","staff":"유소미"},{"id":"cs0112","date":"2026-01-30","channel":"프리핀스 담당자","type":"오류","biz":"렌트카","co":"유소미","content":"미납 통행료 자동 조회 불가 확인 요청","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중 ","staff":"유소미"},{"id":"cs0113","date":"2026-01-30","channel":"채널톡","type":"오류","biz":"렌트카","co":"스타오토모빌","content":"차량 일괄 등록 불가 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 차량 등록 연동 업체의 오류로 현재 정상 작동 확인(개발실)","staff":"유소미"},{"id":"cs0114","date":"2026-01-30","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카","content":"배차 완료' 버튼 동작X 확인 요청","status":"접수","sla":"","memo":"계약번호 확인 요청 드렸으나 회신 없음","staff":"유소미"},{"id":"cs0115","date":"2026-01-30","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"페스트원","content":"은행 입출금 내역 조회 불가 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0116","date":"2026-02-02","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"이파인 법인 등록시 입력란 작성 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0117","date":"2026-02-02","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"CMS 연결시 본인 명의가 아닌 결제 수단 등록 가능 여부 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0118","date":"2026-02-02","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"명의 이전 처리 확인 가능 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 단순 상태값 변경으로 실제 해당 고객에게 직접 명의가 이전되는 것은 아님을 안내 완료","staff":"유소미"},{"id":"cs0119","date":"2026-02-02","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"리버스헬스케어","content":"미수 고객 재실행 이력 확인 불가 및 사유 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0120","date":"2026-02-02","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"계약서 저장시 오류 팝업","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0121","date":"2026-02-02","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리피즈","content":"FRP 해지 신청 방법 및 위약금 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0122","date":"2026-02-02","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카","content":"등록 완료 된 차량 계약서 작성시 차량모델, 차종 노출 불가 오류 확인 요청","status":"완료","sla":"6일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0123","date":"2026-02-02","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"등록 완료 된 차량 계약서 작성시 차량모델, 차종 노출 불가 오류 확인 요청","status":"완료","sla":"6일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0124","date":"2026-02-03","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"렌트투게더","content":"대기 차량 검색 불가","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0125","date":"2026-02-03","channel":"채널톡","type":"오류","biz":"렌트카","co":"스타오토모빌","content":"CMS 연결 완료 하였으나 상태 변경 안 되어 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 내용이 발생한 사유 확인 후 고객사 안내 예정","staff":"유소미"},{"id":"cs0126","date":"2026-02-03","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"등록 완료 된 차량이 차량 정보가 없다고 알럿 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0127","date":"2026-02-03","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"카드 영수증 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 효성 페이지에서 영수증 발급 안내 완료","staff":"유소미"},{"id":"cs0128","date":"2026-02-03","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"계약 삭제 불가 확인 요청","status":"완료","sla":"1일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0129","date":"2026-02-03","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카","content":"차량 추가 등록 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0130","date":"2026-02-03","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽모빌리티","content":"차량 추가 등록 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0131","date":"2026-02-04","channel":"프리핀스 담당자","type":"삭제","biz":"렌트카","co":"유소미","content":"[렌터카] 무인, 미납 내역의 '명의이전처리'버튼 삭제 요청","status":"완료","sla":"4일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0132","date":"2026-02-05","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"주말 및 공휴일 자동 결제 진행 여부 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0133","date":"2026-02-05","channel":"프리핀스 담당자","type":"수정","biz":"FRP 공통","co":"유소미","content":"포인트 단위 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0134","date":"2026-02-05","channel":"프리핀스 담당자","type":"수정","biz":"FRP 공통","co":"유소미","content":"공지사항 페이지 어드민과 같이 노출 되며 해당 내용 수정 요청","status":"완료","sla":"3일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0135","date":"2026-02-05","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"등록 완료 된 차량이 차량 정보가 없다고 알럿 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0136","date":"2026-02-06","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"유소미","content":"기초상품, 렌탈상품 일괄 다운로드 기능 개선 요청","status":"완료","sla":"2일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0137","date":"2026-02-06","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"CMS 연결 가능 통장 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0138","date":"2026-02-06","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"매칭 관련 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0139","date":"2026-02-09","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"리버스헬스케어","content":"로딩이 잦고 서버가 느려 개선 요청","status":"접수","sla":"","memo":"트렐로에 접수 후 처리 중 / 어떤 사항인지 고객사 확인 요청 드렸으나 회신 없음","staff":"유소미"},{"id":"cs0140","date":"2026-02-09","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"리버스헬스케어","content":"유입경로 내용으로 검색할 수 있도록 검색 기능 추가 요청","status":"완료","sla":"OK","memo":"해당 내용은 범용적 개발이 아닌 것으로 판단하여 커스터마이징 신규 개발건으로 고객사 의사결정 요청 완료","staff":"유소미"},{"id":"cs0141","date":"2026-02-09","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"고객별 상환 스케줄 확인 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0142","date":"2026-02-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"최초결제일 상이하여 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 고객사쪽에서 정기 결제일을 설정하면 최초 결제일이 자동 셋팅 되는 것으로 착각하여 최초 결제일과 정기 결제일이 ","staff":"유소미"},{"id":"cs0143","date":"2026-02-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 당사자가 아닌 사람의 정보로 발행 가능 여부 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0144","date":"2026-02-10","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"피비아이","content":"중복로그인 알림으로 로그인 불가 문의","status":"완료","sla":"OK","memo":"처리 완료 / 해당 업체 실사용 계정 블랙리스트에서 발견 / 실사용, 사용하지 않은 계정 바꾸어 정상 로그인 가능 안내 완료","staff":"유소미"},{"id":"cs0145","date":"2026-02-10","channel":"채널톡","type":"개선 요청","biz":"FRP 공통","co":"유소미","content":"계약, 청구 엑셀 필드 추가 요청","status":"완료","sla":"7일 초과","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0146","date":"2026-02-11","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"계약기간 변경 가능 여부 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 계약은 팩토링 실행중인 건으로 리딩 허송대리님 확인 결과 불가능하여 계약서 재작성 및 내용 수정 불가 안내","staff":"유소미"},{"id":"cs0147","date":"2026-02-11","channel":"대표전화","type":"단순 문의","biz":"","co":"?","content":"프리핀스 도입 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0148","date":"2026-02-11","channel":"대표전화","type":"단순 문의","biz":"일반 렌탈","co":"스테이플레이","content":"프리핀스 도입 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0149","date":"2026-02-11","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"차량정보 자동으로 불러오지 못함 오류 확인 요청","status":"완료","sla":"OK","memo":"처리 완료 / 해당 차량은 등록되지 않은 차량으로 확인 / 정상 등록 고객사 확인 완료","staff":"유소미"},{"id":"cs0150","date":"2026-02-11","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"등록 완료 된 차량이 차량 정보가 없다고 알럿 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0151","date":"2026-02-12","channel":"채널톡","type":"삭제","biz":"FRP 공통","co":"유소미","content":"1:1문의 탭 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0152","date":"2026-02-12","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제예정일에 결제 되어지지 않음 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 앤드 유저 '월 사용액 초과'로 결제 실패로 오후 3시 미수에서 확인 가능함을 안내 완료","staff":"유소미"},{"id":"cs0153","date":"2026-02-12","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제 사이클 직전 계약 체결 후 당일 결제 여부 문의 ","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 당일 계약서 및 CMS 모두 승인 시점이 결제 직전이면 당일 결제에 포함되어 결제 되어짐 안내 완료","staff":"유소미"},{"id":"cs0154","date":"2026-02-12","channel":"채널톡","type":"개선 요청","biz":"렌트카","co":"퍼시픽렌터카","content":"렌터카 '계약완료'된 계약서 수정 가능하게끔 수정 요청 ","status":"완료","sla":"3일 초과","memo":"트렐로에 접수 후 처리 완료 / 기능 개발X / 계약서 재작성 후 재작성 계약번호, 기존 계약번호를 전달 받으면 기존 동의 내용 데이터 이관으로","staff":"유소미"},{"id":"cs0155","date":"2026-02-13","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"차량 자동 등록 불가 확인 요청(146하7222)","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 차량 기본 정보 등록이 필요한 차량으로 이후 동일 현상이 발생하는 차량의 브랜드, 모델명, 년식으로 작성하여 리","staff":"유소미"},{"id":"cs0156","date":"2026-02-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"미수 고객 CMS 재실행 시도 수수료 문의","status":"완료","sla":"2일 초과","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0157","date":"2026-02-19","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"모아카","content":"홈페이지 링크 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0158","date":"2026-02-19","channel":"채널톡","type":"수정","biz":"렌트카","co":"모아카","content":"휴면계정 해재 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0159","date":"2026-02-19","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"미수 고객 PG 결제 알림 확인 요청","status":"완료","sla":"OK","memo":"미수 고객은 CMS 재실행만 가능하며 PG 결제는 개발 완료(3월말~4월초)에 가능 / 전까지는 나이스를 통한 수기 정산 진행 안내","staff":"유소미"},{"id":"cs0160","date":"2026-02-20","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"퓨어코스메틱","content":"CMS 재동의 요청을 보냈으나 결제가 되지 않아 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 고객이 아직 동의 전 상태로 확인되어 링크 발송 완료","staff":"한진선"},{"id":"cs0161","date":"2026-02-20","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"유진아이앤씨","content":"프리핀스 도입 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"한진선"},{"id":"cs0162","date":"2026-02-20","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"결제 되지 않아 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 결제 수단에서 결제가 되지 않아 오후 3시 정상 미수 확인 고객 안내 완료","staff":"한진선"},{"id":"cs0163","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"개인 고객 CMS를 개인사업자 카드로 연결 가능한지에 대한 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 계약자명과 CMS 동의자명이 다를 수 있음 / CMS 동의자명으로 된 결제수단만 등록 가능함을 안내 완료","staff":"유소미"},{"id":"cs0164","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"결제 실패 사유 '중복출금신청' 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0165","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"?","co":"박범준","content":"홍보 관련 제안 프리핀스 공식 메일주소 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0166","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"은행입출금내역 조회 불가 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 데이터를 불러오는 서비스에서 발생한 오류로 정상 작동 확인 되는 대로 운영실 안내 요청 완료","staff":"유소미"},{"id":"cs0167","date":"2026-02-23","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽렌터카","content":"월청구금액 상이 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0168","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"자동이체 일시중지 및 중지 기능 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 일시중지와 중지가 구분되어 있지 않으며 CMS 초기화를 이용하여 자동이체를 끊을 수 있음을 안내 완료","staff":"유소미"},{"id":"cs0169","date":"2026-02-23","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0170","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"스마트폰이 없는 고객의 동의 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 고객 휴대폰 번호로 발송된 링크를 PC로 열어 동의 진행 안내 완료","staff":"유소미"},{"id":"cs0171","date":"2026-02-23","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"본인 명의 휴대폰번호만 계약 가능 여부","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 계약을 진행할 때 다른 명의자의 번호 등록 후 체결전 번호 수정으로 안내 완료","staff":"유소미"},{"id":"cs0172","date":"2026-02-23","channel":"채널톡","type":"오류","biz":"렌트카","co":"퍼시픽모빌리티","content":"청구 미생성으로 인한 청구 생성 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 계약이 '계약완료' 상태로 '운행중'으로 상태 변경을 하여야 청구 생성 됨을 안내 완료","staff":"유소미"},{"id":"cs0173","date":"2026-02-23","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"CMS 동의를 진행 하였는데 상태 변경이 되지 않아 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 처리 완료 / 효성과 FRP 시스템 확인 결과 등록 된 이력이 확인되지 않아 재등록 요청 / 이후 재등록하여 승인완료 정상 확인 ","staff":"유소미"},{"id":"cs0174","date":"2026-02-24","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"현대아이티","content":"최초결제일 변경 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 계약이 체결 된 시점에서의 결제 정보(최초결제일)는 변경 불가로 안내 완료","staff":"유소미"},{"id":"cs0175","date":"2026-02-24","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"선환불 진행 건 입금 내역 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0176","date":"2026-02-24","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카","content":"동의 정보 데이터 이관 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0177","date":"2026-02-24","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"과거 계약서 재사용 여부 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 계약이 아직 '작성중' 상태라면 수정 후 계약체결 또는 '계약완료' 상태의 계약서는 재작성으로 안내 완료","staff":"유소미"},{"id":"cs0178","date":"2026-02-25","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"퓨어코스메틱","content":"미수 고객 CMS 재실행 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0179","date":"2026-02-25","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"삼아사운드","content":"프리핀스 도입 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0180","date":"2026-02-25","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"정기 결제일 변경 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0181","date":"2026-02-25","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"유소미","content":"스타오토모빌 12회차 청구 미생성 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0182","date":"2026-02-26","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"엑셀 다운로드 필드 추가 내용 금일 배포 확인 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0183","date":"2026-02-26","channel":"고객의 목소리","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"계약서 바로 삭제가 아닌 휴지통 생성 요청","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중","staff":"유소미"},{"id":"cs0184","date":"2026-02-26","channel":"채널톡","type":"수정","biz":"일반 렌탈","co":"더조각","content":"팩토링 중단 계약건 중도 해지 요청","status":"완료","sla":"OK","memo":"리딩 환매대금 확인 및 채권 종결 처리 완료 확인(리딩 허송대리님)","staff":"유소미"},{"id":"cs0185","date":"2026-02-27","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"청구 미생성 및 결제 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0186","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"엑셀다운로드 기능 확인 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0187","date":"2026-02-27","channel":"프리핀스 담당자","type":"개선 요청","biz":"일반 렌탈","co":"유소미","content":"청구탭에서 청구별, 계약별 다운로드 기능 추가 요청","status":"완료","sla":"6일 초과","memo":"트렐로에 접수 후 처리 완료 / 03/12 배포 예정","staff":"유소미"},{"id":"cs0188","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"전체 계약자 남은 미수금액 합계 확인 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0189","date":"2026-02-27","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"리버스헬스케어","content":"청구 엑셀 다운로드 했을 때 값의 오류 확인 요청","status":"완료","sla":"OK","memo":"공민석PO님 확인 및 수정 완료","staff":"유소미"},{"id":"cs0190","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"단기 청구 결제 불가 확인 요청","status":"완료","sla":"OK","memo":"CS 구글쳇으로 접수 및 처리 확인 / 해당 고객님의 월 한도액 초과로 이력 확인 불가는 개발실에서 확인 중","staff":"유소미"},{"id":"cs0191","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"프리핀스 재계약 필요 서류 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 ","staff":"유소미"},{"id":"cs0192","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"스타오토모빌","content":"프리핀스 재계약서 발송 요청","status":"진행 중","sla":"","memo":"기존 계약과 동일한 내용으로 계약서 발송 완료","staff":"유소미"},{"id":"cs0193","date":"2026-02-27","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"팩토링 중단 계약건 중도 해지 요청","status":"완료","sla":"OK","memo":"리딩 환매대금 확인 및 채권 종결 처리 완료 확인(리딩 허송대리님)","staff":"유소미"},{"id":"cs0194","date":"2026-02-27","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽모빌리티","content":"차량 등록 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0195","date":"2026-02-27","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"비영리법인 계약 작성시 법인번호 필수값 제외 검토 및 계약서 작성 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 임의값으로 작성 후 계약 체결","staff":"유소미"},{"id":"cs0196","date":"2026-03-03","channel":"프리핀스 담당자","type":"수정","biz":"일반 렌탈","co":"유소미","content":"한국조명 사용 일시중지로 인한 2월분 환불, 세금계산서 취소 처리 요청","status":"완료","sla":"OK","memo":"CMS 초기화 및 세금계산서 취소, 환불 진행 완료","staff":"유소미"},{"id":"cs0197","date":"2026-03-03","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"세금계산서 취소 기능 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0198","date":"2026-03-04","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"결제건별로 동의를 받지 않고 최초 한건에 대한 동의로 통일 개선 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 ","staff":"유소미"},{"id":"cs0199","date":"2026-03-04","channel":"채널톡","type":"개선 요청","biz":"일반 렌탈","co":"현대아이티","content":"CMS 동의 문자 발송 내용 수정 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 03.12 내용 수정 완료 및 배포 / 03.19 문자로만 발송 배포 예정","staff":"유소미"},{"id":"cs0200","date":"2026-03-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"계약완료'된 상태에서의 결제수단 변경 가능 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0201","date":"2026-03-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"CMS 카드 결제 취소 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 당일 결제건에 한해 요청시 취소 가능 안내 완료","staff":"유소미"},{"id":"cs0202","date":"2026-03-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"더조각","content":"권정원 고객(중도해지) 히스토리 파악 필요하나 계약서 삭제 문의","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중 / '계약종료'로 계약 상태 변경 후 히스토리 파악 가능하게끔 안내 완료","staff":"유소미"},{"id":"cs0203","date":"2026-03-04","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"더조각","content":"권정원 고객 남은 금액 상이하게 표기되어 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 해당 건을 팩토링 건으로 리딩, 프리핀스OS에서 계산되는 수식이 달라 금액이 다를 수 있음을 리딩 확인 / 정상","staff":"유소미"},{"id":"cs0204","date":"2026-03-04","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"결제 되지 않은 건 결제 수단 변경 불가 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0205","date":"2026-03-04","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"계약완료' 변경 된 휴대폰 번호로 CMS 동의 발송 방법 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0206","date":"2026-03-05","channel":"채널톡","type":"개선 요청","biz":"금융","co":"유소미","content":"계약 중도해지 및 종료 고객 납부 이력 확인 가능 개선 요청","status":"진행 중","sla":"","memo":"트렐로에 접수 후 처리 중","staff":"유소미"},{"id":"cs0207","date":"2026-03-05","channel":"채널톡","type":"오류","biz":"렌트카","co":"렌트투게더","content":"계약서 다운로드시 렌탈료 노출 되지 않아 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 해당 계약 당시 당사 시스템에서는 결제 정보를 등록하지 않고 계약서 발송이 가능함을 확인 / 해당 계약은 결제 ","staff":"유소미"},{"id":"cs0208","date":"2026-03-05","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"리버스헬스케어","content":"렌탈료 부분 납부완료 변경 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 부분 납부완료 변경은 불가하며 [납부완료로 변경]전 부분 납부 받은 내용을 메모란에 작성 후 히스토리 파악으로 ","staff":"유소미"},{"id":"cs0209","date":"2026-03-05","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0210","date":"2026-03-06","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"렌트투게더","content":"계약서 다운로드 되지 않아 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 수기계약으로 작성 된 계약으로 다운로드 진행 안내 완료","staff":"유소미"},{"id":"cs0211","date":"2026-03-06","channel":"채널톡","type":"삭제","biz":"렌트카","co":"스타오토모빌","content":"계약 삭제","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0212","date":"2026-03-09","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"신용정보 조회 문자 발송 확인 불가 확인 요청","status":"완료","sla":"1일 초과","memo":"CS 구글쳇으로 문의(공민석PO님)","staff":"유소미"},{"id":"cs0213","date":"2026-03-10","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 발급 정보 리스트 확인 문의","status":"진행 중","sla":"","memo":"CS 구글쳇으로 개발 일정 확인 중","staff":"유소미"},{"id":"cs0214","date":"2026-03-10","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"렌트투게더","content":"계약서 보험 건당 및 인당에 관련 내용 확인 문의 ","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0215","date":"2026-03-10","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"법인번호 검증 불가 확인 요청","status":"완료","sla":"OK","memo":"처리 완료 / 임의값으로 작성 후 프리핀스에서 수정 진행 / 이후 전자계약 체결 완료","staff":"유소미"},{"id":"cs0216","date":"2026-03-10","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"렌트투게더","content":"프리핀스 이용료 및 계산서 발행 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 이용료 납부 계좌 사본 발송 및 미수금 납부 요청 완료","staff":"유소미"},{"id":"cs0217","date":"2026-03-12","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현금영수증 자동 발행으로 수정 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0218","date":"2026-03-12","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"결제 수단 변경 후 결제 불가 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0219","date":"2026-03-13","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"에스에스컴퓨터","content":"이용 메뉴얼 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 웰컴 메일 발송 완료","staff":"유소미"},{"id":"cs0220","date":"2026-03-16","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"CMS 결제 수단 대신 입력 문의","status":"완료","sla":"OK","memo":"앤드 고객 변심으로 접수 취소","staff":"유소미"},{"id":"cs0221","date":"2026-03-16","channel":"채널톡","type":"삭제","biz":"렌트카","co":"퍼시픽렌터카","content":"계약 삭제 ","status":"완료","sla":"OK","memo":"고객 요청으로 접수 취소 ","staff":"유소미"},{"id":"cs0222","date":"2026-03-16","channel":"채널톡","type":"수정","biz":"렌트카","co":"퍼시픽렌터카","content":"동의 정보 데이터 이관 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0223","date":"2026-03-17","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"등록되지 않은 고객 효성에서 등록 되어 있어 매칭 된 계약건 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0224","date":"2026-03-17","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"리버스헬스케어","content":"미수 고객 미수에서 확인 불가","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 1.0에서 고객사 내부적으로 CMS 초기화 후 등록하지 않은 것으로 확인","staff":"유소미"},{"id":"cs0225","date":"2026-03-17","channel":"채널톡","type":"삭제","biz":"일반 렌탈","co":"현대아이티","content":"청구 삭제 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0226","date":"2026-03-18","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"CMS 요청 후 상태 변경X 및 문자 발송 되지 않음 오류 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0227","date":"2026-03-19","channel":"채널톡","type":"오류","biz":"렌트카","co":"엔카","content":"차량 등록 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0228","date":"2026-03-19","channel":"프리핀스 담당자","type":"오류","biz":"일반 렌탈","co":"유소미","content":"비밀번호 찾기 [확인] 버튼 비활성화 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0229","date":"2026-03-19","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"CMS 카드 결제 할부 불가의 대한 응대 방향 확인 요청","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / CMS 결제 할부 불가 안내 / 고객이 직접 카드 어플 통해서 분할납부 처리는 할 수 있음 / 다만, 최초 일시","staff":"유소미"},{"id":"cs0230","date":"2026-03-20","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"미수 오류 문구 문의","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0231","date":"2026-03-20","channel":"채널톡","type":"단순 문의","biz":"렌트카","co":"퍼시픽렌터카","content":"변경 된 고객정보 계약에서 확인 되지 않음 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0232","date":"2026-03-20","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"현대아이티","content":"현대아이티 이용료 미납 문의","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료 / 김샛별팀장님 이관 완료","staff":"유소미"},{"id":"cs0233","date":"2026-03-23","channel":"프리핀스 담당자","type":"수정","biz":"일반 렌탈","co":"유소미","content":"[스타오토모빌] '계약종료'로 상태 변경 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료","staff":"유소미"},{"id":"cs0234","date":"2026-03-23","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"현대아이티","content":"전자 계약서 작성 불가 확인 요청","status":"완료","sla":"OK","memo":"CS 구글쳇으로 문의(공민석PO님) / 단순 문의로 즉시 응대 완료 / 테스트 결과 체크 박스 딜레이는 확인 되나 진행이 불가하진 않음 계약서 ","staff":"유소미"},{"id":"cs0235","date":"2026-03-24","channel":"채널톡","type":"단순 문의","biz":"일반 렌탈","co":"페스트원","content":"일반 계산서 발급 가능 여부(세금계산서, 현금영수증X)","status":"완료","sla":"OK","memo":"단순 문의로 즉시 응대 완료","staff":"유소미"},{"id":"cs0236","date":"2026-03-24","channel":"채널톡","type":"오류","biz":"일반 렌탈","co":"페스트원","content":"결제 받지 않은 청구 '결제완료'로 보여져 확인 요청","status":"완료","sla":"OK","memo":"트렐로에 접수 후 처리 완료 / 확인 결과 해당 일자에 고객사 자체적으로 [납부완료 변경]한 것으로 확인되어 고객사 안내 완료","staff":"유소미"}];
+
+const DEMO_DEV = [
+  {no:1,cat:'렌탈1.1',type:'개선',item:'사용자 권한관리',date:'2025-11-05',end:'-',status:'대기',ceo:'담당별 권한 차등 니즈'},
+  {no:2,cat:'렌탈1.1',type:'신규',item:'NICE CMS 개발/연동',date:'진행중',end:'2025-11-20',status:'진행',ceo:'-'},
+  {no:4,cat:'렌탈1.1',type:'신규',item:'기업 신용 정보 조회',date:'진행중',end:'완료예정일 표기',status:'진행',ceo:'기능개발요청서 승인 완료'},
+  {no:7,cat:'고객사',type:'개선',item:'계약 공동계약자/연대보증인 추가',date:'2025-11-26',end:'-',status:'대기',ceo:'퍼시픽렌터카 요청/개발비 부담 의사'},
+  {no:19,cat:'금융사',type:'신규',item:'ABL (ADMIN)',date:'진행중',end:'완료예정일',status:'진행',ceo:'-'},
+  {no:20,cat:'금융사',type:'신규',item:'ABL (금융사) ①',date:'진행중',end:'완료예정일',status:'진행',ceo:'-'},
+];
+
+// ============ AUTH ============
+function fillDemo(email, pw) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-pw').value = pw;
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  err.classList.remove('show');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  await new Promise(r => setTimeout(r, 600));
+
+  // Demo mode
+  if (DEMO_USERS[email] && DEMO_USERS[email].pw === pw) {
+    currentUserData = { ...DEMO_USERS[email], email };
+    initApp();
+    return;
+  }
+
+  // Try Firebase (if configured)
+  if (!demoMode && firebase.auth) {
+    try {
+      await firebase.auth().signInWithEmailAndPassword(email, pw);
+      return;
+    } catch(e) {
+      err.textContent = e.message;
+      err.classList.add('show');
+    }
+  } else {
+    err.textContent = '이메일 또는 비밀번호를 확인해주세요.';
+    err.classList.add('show');
+  }
+  btn.innerHTML = '로그인';
+  btn.disabled = false;
+}
+
+function doLogout() {
+  currentUser = null;
+  currentUserData = null;
+  allCS = [];
+  // nav 메뉴 전체 초기화 (role별로 숨겨진 것 복원)
+  ['nav-register','nav-cs','nav-dev','nav-clevel','nav-config','cs-list-register-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-screen').classList.remove('visible');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-btn').innerHTML = '로그인';
+  document.getElementById('login-btn').disabled = false;
+}
+
+// ============ APP INIT ============
+function initApp() {
+  const u = currentUserData;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').classList.add('visible');
+
+  document.getElementById('user-name').textContent = u.name;
+  document.getElementById('user-role').textContent = roleLabel(u.role);
+  document.getElementById('user-avatar').textContent = u.avatar || u.name[0];
+
+  // 조회는 전원 가능 · CS 등록 메뉴는 cs/admin만 노출 · 설정은 admin/clevel만
+  const canEdit = ['cs','admin'].includes(u.role);
+  document.getElementById('nav-register').style.display = canEdit ? '' : 'none';
+  document.getElementById('cs-list-register-btn').style.display = canEdit ? '' : 'none';
+  document.getElementById('nav-config').style.display = ['admin','dev'].includes(u.role) ? '' : 'none';
+
+  // Load data
+  allCS = [...DEMO_CS];
+  renderAll();
+  showPage('overview', document.querySelector('.nav-item.active'));
+  if(window.innerWidth<=768) {
+    document.getElementById('mtab-overview').classList.add('active');
+  }
+}
+
+function roleLabel(r) {
+  return {cs:'Operation팀',dev:'개발팀',clevel:'C-Level',admin:'관리자'}[r] || r;
+}
+
+// ============ RENDER ============
+function renderAll() {
+  computeSLA();
+  renderStats();
+  renderCharts();
+  renderCSTable();
+  renderBreachTable();
+  renderDevTable();
+  renderCLevelPage();
+  populateMonthFilter();
+  syncMobileBadges();
+}
+
+function computeSLA() {
+  // SLA 기준: 영업일 기준이나 단순화하여 달력일 기준으로 계산
+  // (단순 문의 1일 / 삭제·수정 3일 / 오류 7일 / 개선 요청 14일)
+  const SLA_RULES = {'단순 문의':1,'삭제':3,'수정':3,'오류':7,'개선 요청':14};
+  allCS.forEach(cs => {
+    // 완료 상태이면 SLA → OK (소미님이 완료로 변경하면 자동 처리)
+    if (cs.status === '완료') {
+      cs.sla = 'OK';
+      return;
+    }
+    // 미완료 건: 오늘 기준으로 경과일 자동 계산
+    const d = new Date(cs.date);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const diff = Math.floor((today - d) / 86400000);
+    const limit = SLA_RULES[cs.type] || 7;
+    if (diff > limit) {
+      cs.sla = `${diff - limit}일 초과`;
+    } else {
+      cs.sla = ''; // SLA 기준 내 처리 중
+    }
+  });
+}
+
+function renderStats() {
+  const today = new Date();
+  const thisYM = today.toISOString().slice(0,7);           // e.g. "2026-03"
+  const thisYear = thisYM.slice(0,4);                       // e.g. "2026"
+  const thisMonthLabel = thisYM.replace('-','년 ') + '월';  // e.g. "2026년 03월"
+
+  // 이번 달
+  const monthAll   = allCS.filter(c => c.date.slice(0,7) === thisYM);
+  const monthDone  = monthAll.filter(c => c.status === '완료');
+  const monthPend  = monthAll.filter(c => c.status !== '완료');
+  const monthBreaches = monthAll.filter(c => c.sla && c.sla.includes('초과'));
+  const monthRate  = monthAll.length ? Math.round(monthDone.length / monthAll.length * 100) : 0;
+
+  // 연간 누적 (이번 연도)
+  const yearAll    = allCS.filter(c => c.date.slice(0,4) === thisYear);
+  const yearDone   = yearAll.filter(c => c.status === '완료');
+  const yearPend   = yearAll.filter(c => c.status !== '완료');
+  const yearRate   = yearAll.length ? Math.round(yearDone.length / yearAll.length * 100) : 0;
+
+  // SLA 초과 — 25년 이후 전체 누적
+  const allBreaches = allCS.filter(c => c.sla && c.sla.includes('초과'));
+
+  // 집계 기준 표시
+  const earliest = allCS.map(c=>c.date).sort()[0] || '';
+  const earliestLabel = earliest ? earliest.slice(0,7).replace('-','년 ')+'월' : '';
+
+  // ── 전체현황 카드 업데이트 ──
+  document.getElementById('stat-month-total').textContent  = monthAll.length + '건';
+  document.getElementById('stat-year-total').textContent   = yearAll.length + '건';
+  document.getElementById('stat-year-label').textContent   = thisYear + '년 누적';
+  document.getElementById('stat-total-basis').textContent  =
+    `집계 기준: ${earliestLabel} ~ ${thisMonthLabel} 전체`;
+
+  document.getElementById('stat-month-pending').textContent  = monthPend.length + '건';
+  document.getElementById('stat-year-pending').textContent   = yearPend.length + '건';
+  document.getElementById('stat-year-pending-label').textContent = thisYear + '년 누적';
+
+  document.getElementById('stat-month-rate').textContent   = monthRate + '%';
+  document.getElementById('stat-year-rate').textContent    = yearRate + '%';
+  document.getElementById('stat-year-rate-label').textContent = thisYear + '년 누적';
+
+  document.getElementById('stat-breach-month').textContent  = monthBreaches.length + '건';
+  document.getElementById('stat-breach-total').textContent  = allBreaches.length + '건';
+
+  // 월 라벨
+  document.getElementById('overview-month-label').textContent = thisMonthLabel + ' 현황';
+  document.getElementById('overview-sub').textContent =
+    `${thisMonthLabel} ${monthAll.length}건 접수 · 완료율 ${monthRate}% · SLA 초과 ${allBreaches.length}건 (누적)`;
+
+  // 배지
+  document.getElementById('badge-breach').textContent = allBreaches.length;
+  const pb = document.getElementById('badge-pending');
+  pb.textContent = monthPend.length;
+  pb.style.display = monthPend.length > 0 ? '' : 'none';
+
+  // 알림 배너
+  const alerts = [];
+  if (monthPend.length > 0) alerts.push(`이번 달 미완료 <span class="alert-chip">${monthPend.length}건</span> — 처리 필요`);
+  if (monthBreaches.length > 0) alerts.push(`이번 달 SLA 초과 <span class="alert-chip">${monthBreaches.length}건</span>`);
+  const banner = document.getElementById('alert-banner');
+  const list   = document.getElementById('alert-list');
+  if (alerts.length > 0) { banner.style.display='flex'; list.innerHTML=alerts.map(a=>`<li>${a}</li>`).join(''); }
+  else banner.style.display='none';
+
+  // ── C-Level 페이지 업데이트 ──
+  const cMonthTitle = thisMonthLabel;
+  document.getElementById('clevel-month-title').textContent = cMonthTitle + ' CS 운영 현황';
+  document.getElementById('clevel-sub').textContent = `${earliestLabel} ~ ${thisMonthLabel} 기준`;
+  document.getElementById('c-month-total').textContent = monthAll.length + '건';
+  document.getElementById('c-month-rate').textContent  = monthRate + '%';
+  document.getElementById('c-breach').textContent      = allBreaches.length + '건';
+  document.getElementById('c-breach-cnt').textContent  = allBreaches.length + '건';
+
+  // 개발 요청 미처리 건수
+  const devPending = DEMO_DEV.filter(d => d.status === '대기' || d.status === '진행');
+  document.getElementById('c-dev-cnt').textContent = devPending.length + '건';
+
+  // 인사이트 — 이번 달 요약
+  const typeCount = {};
+  monthAll.forEach(c => { typeCount[c.type] = (typeCount[c.type]||0)+1; });
+  const topType = Object.entries(typeCount).sort((a,b)=>b[1]-a[1])[0];
+  const monthInsights = [
+    `이번 달 총 ${monthAll.length}건 접수, ${monthDone.length}건 완료 (완료율 ${monthRate}%)`,
+    topType ? `가장 많은 유형: ${topType[0]} ${topType[1]}건` : '',
+    `처리 중(미완료) ${monthPend.length}건 잔여`,
+    `평균 처리 완료 시간: SLA 기준 내 ${monthDone.length}건 처리`,
+  ].filter(Boolean);
+  document.getElementById('c-insight-month').innerHTML =
+    monthInsights.map(t=>`<div class="insight-item">${t}</div>`).join('');
+
+  // 인사이트 — 리스크 포인트
+  const riskInsights = [];
+  if (allBreaches.length > 0) riskInsights.push(`SLA 초과 누적 ${allBreaches.length}건 — 대응 속도 개선 필요`);
+  if (devPending.length > 0) riskInsights.push(`개발 요청 미반영 ${devPending.length}건 — 고객 불만 누적 위험`);
+  const improvePend = allCS.filter(c=>c.type==='개선 요청'&&c.status!=='완료');
+  if (improvePend.length > 0) riskInsights.push(`개선 요청 미완료 ${improvePend.length}건 — 서비스 개선 반영 검토 필요`);
+  const errorBreaches = allBreaches.filter(c=>c.type==='오류');
+  if (errorBreaches.length > 0) riskInsights.push(`오류 SLA 초과 ${errorBreaches.length}건 — 서비스 품질 영향`);
+  if (riskInsights.length === 0) riskInsights.push('현재 주요 리스크 없음');
+  document.getElementById('c-insight-risk').innerHTML =
+    riskInsights.map(t=>`<div class="insight-item">${t}</div>`).join('');
+}
+
+function renderCharts() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+  const tc = isDark ? '#6c6a63' : '#888780';
+
+  // 월별 집계
+  const byMonth = {};
+  allCS.forEach(cs => {
+    const m = cs.date.slice(0,7);
+    if (!byMonth[m]) byMonth[m] = {total:0, breach:0, done:0};
+    byMonth[m].total++;
+    if (cs.sla && cs.sla.includes('초과')) byMonth[m].breach++;
+    if (cs.status === '완료') byMonth[m].done++;
+  });
+  const months = Object.keys(byMonth).sort().slice(-9);
+  const labels = months.map(m => {
+    const [y,mo] = m.split('-');
+    return (y==='2025'?'25년 ':'26년 ') + parseInt(mo) + '월';
+  });
+  const totals  = months.map(m => byMonth[m].total);
+  const breaches = months.map(m => byMonth[m].breach);
+  const rates   = months.map(m => byMonth[m].total
+    ? Math.round(byMonth[m].done / byMonth[m].total * 100) : 0);
+
+  // ── 차트 1: 월별 접수 + 완료율 ──
+  if (monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(document.getElementById('chart-monthly'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {label:'접수',data:totals,
+          backgroundColor:isDark?'rgba(23,153,110,0.35)':'rgba(23,153,110,0.22)',
+          borderColor:'#0a6650',borderWidth:1,yAxisID:'y'},
+        {label:'SLA 초과',data:breaches,
+          backgroundColor:isDark?'rgba(222,69,69,0.5)':'rgba(222,69,69,0.25)',
+          borderColor:'#9e2828',borderWidth:1,yAxisID:'y'},
+        {label:'완료율(%)',data:rates,type:'line',
+          borderColor:'#2e7fd4',backgroundColor:'transparent',
+          borderWidth:2,pointBackgroundColor:'#2e7fd4',pointRadius:3,
+          fill:false,tension:0.3,yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>
+          ctx.datasetIndex===2 ? ctx.dataset.label+': '+ctx.raw+'%'
+          : ctx.dataset.label+': '+ctx.raw+'건'}}},
+      scales:{
+        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}}},
+        y:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
+           title:{display:true,text:'건수',color:tc,font:{size:9}}},
+        y2:{position:'right',grid:{display:false},min:0,max:100,
+            ticks:{color:'#2e7fd4',font:{size:10},callback:v=>v+'%'},
+            title:{display:true,text:'완료율',color:'#2e7fd4',font:{size:9}}}
+      }
+    }
+  });
+
+  // ── 차트 2: 유형별 수평 막대 (내림차순, 끝 건수 표기) ──
+  const typeCnt = {};
+  allCS.forEach(c => { typeCnt[c.type]=(typeCnt[c.type]||0)+1; });
+  const typeSorted = Object.entries(typeCnt).sort((a,b)=>a[1]-b[1]); // 오름차순 = 차트에서 위→아래 내림차순
+  const typeLabels = typeSorted.map(([k])=>k);
+  const typeVals   = typeSorted.map(([,v])=>v);
+  const typeColors = ['#6b63cc','#e8960e','#2e7fd4','#de4545','#17996e'];
+  const typeColorsMap = {'단순 문의':'#17996e','오류':'#de4545','수정':'#2e7fd4','삭제':'#e8960e','개선 요청':'#6b63cc'};
+  const barColors = typeLabels.map(t => typeColorsMap[t]||'#888');
+
+  if (typeChart) typeChart.destroy();
+  typeChart = new Chart(document.getElementById('chart-type'), {
+    type: 'bar',
+    data: {
+      labels: typeLabels,
+      datasets: [{
+        data: typeVals,
+        backgroundColor: barColors.map(c=>c+'55'),
+        borderColor: barColors,
+        borderWidth: 1.5,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.raw+'건'}},
+        datalabels:{
+          anchor:'end',align:'end',
+          color: isDark?'#b0aea6':'#5a5955',
+          font:{size:11,weight:'600'},
+          formatter: v=>v+'건'
+        }
+      },
+      scales:{
+        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
+        y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
+      },
+      layout:{padding:{right:40}}
+    }
+  });
+
+  // ── 차트 3: 기업구분별 수평 막대 ──
+  const bizRaw = {};
+  allCS.forEach(c => {
+    const b = (!c.biz||c.biz==='?'||c.biz==='') ? '기타' : c.biz;
+    bizRaw[b]=(bizRaw[b]||0)+1;
+  });
+  const bizSorted = Object.entries(bizRaw).sort((a,b)=>a[1]-b[1]);
+  const bizLabels = bizSorted.map(([k])=>k);
+  const bizVals   = bizSorted.map(([,v])=>v);
+  const bizColorMap = {'일반 렌탈':'#17996e','렌트카':'#2e7fd4','바이크':'#e8960e','금융':'#6b63cc','FRP 공통':'#de4545','기타':'#888'};
+  const bizColors = bizLabels.map(b=>bizColorMap[b]||'#888');
+
+  const bizCanvas = document.getElementById('chart-biz');
+  // ── 차트 4: 이번 달 유형별 ──
+  const thisYM2 = new Date().toISOString().slice(0,7);
+  const monthTypeRaw = {};
+  allCS.filter(c=>c.date.slice(0,7)===thisYM2).forEach(c=>{
+    monthTypeRaw[c.type]=(monthTypeRaw[c.type]||0)+1;
+  });
+  const mtSorted = Object.entries(monthTypeRaw).sort((a,b)=>a[1]-b[1]);
+  const mtCanvas = document.getElementById('chart-month-type');
+  if (window._mtChart) window._mtChart.destroy();
+  if (mtCanvas && mtSorted.length) {
+    window._mtChart = new Chart(mtCanvas, {
+      type:'bar',
+      data:{
+        labels:mtSorted.map(([k])=>k),
+        datasets:[{
+          data:mtSorted.map(([,v])=>v),
+          backgroundColor:mtSorted.map(([k])=>(typeColorsMap[k]||'#888')+'55'),
+          borderColor:mtSorted.map(([k])=>typeColorsMap[k]||'#888'),
+          borderWidth:1.5,borderRadius:4,borderSkipped:false
+        }]
+      },
+      options:{
+        indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>ctx.raw+'건'}},
+          datalabels:{anchor:'end',align:'end',
+            color:isDark?'#b0aea6':'#5a5955',font:{size:11,weight:'600'},
+            formatter:v=>v+'건'}},
+        scales:{
+          x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
+          y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
+        },
+        layout:{padding:{right:40}}
+      }
+    });
+  }
+
+  if (!bizCanvas) return;
+  if (window._bizChart) window._bizChart.destroy();
+  window._bizChart = new Chart(bizCanvas, {
+    type:'bar',
+    data:{
+      labels:bizLabels,
+      datasets:[{
+        data:bizVals,
+        backgroundColor:bizColors.map(c=>c+'55'),
+        borderColor:bizColors,
+        borderWidth:1.5,
+        borderRadius:4,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.raw+'건'}},
+        datalabels:{
+          anchor:'end',align:'end',
+          color:isDark?'#b0aea6':'#5a5955',
+          font:{size:11,weight:'600'},
+          formatter:v=>v+'건'
+        }
+      },
+      scales:{
+        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
+        y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
+      },
+      layout:{padding:{right:40}}
+    }
+  });
+}
+
+function typeBadge(t) {
+  const m={'단순 문의':'b-blue','오류':'b-red','수정':'b-green','삭제':'b-amber','개선 요청':'b-purple'};
+  return `<span class="badge ${m[t]||'b-gray'}">${t}</span>`;
+}
+function statusBadge(s) {
+  const m={'완료':'b-green','진행 중':'b-amber','접수':'b-blue','보류':'b-gray'};
+  return `<span class="badge ${m[s]||'b-gray'}">${s}</span>`;
+}
+function slaBadge(s) {
+  if (!s || s === 'OK') return '<span class="sla-ok">✓ OK</span>';
+  if (s.includes('초과')) return `<span class="sla-ng">▲ ${s}</span>`;
+  return '';
+}
+
+function renderCSTable(resetPage) {
+  if (resetPage) csPage = 1;
+  let data = allCS.filter(c => {
+    const mt = typeFilter === 'all' || c.type === typeFilter;
+    const mb = !breachOnly || (c.sla && c.sla.includes('초과'));
+    const ms = !searchTerm || c.co.includes(searchTerm) || c.content.includes(searchTerm);
+    const mst = statusFilter === 'all'
+      ? true
+      : statusFilter === 'active'
+        ? (c.status === '접수' || c.status === '진행 중')
+        : c.status === statusFilter;
+    const mm = monthFilter === 'all' || c.date.slice(0,7) === monthFilter;
+    return mt && mb && ms && mst && mm;
+  });
+
+  // 3. 접수일 내림차순 정렬
+  data.sort((a, b) => b.date.localeCompare(a.date));
+
+  const total = data.length;
+  const totalPages = Math.ceil(total / CS_PAGE_SIZE);
+  csPage = Math.min(csPage, Math.max(1, totalPages));
+  const start = (csPage - 1) * CS_PAGE_SIZE;
+  const pageData = data.slice(start, start + CS_PAGE_SIZE);
+
+  document.getElementById('cs-tbl-cnt').textContent = total + '건';
+  document.getElementById('cs-list-sub').textContent =
+    `총 ${allCS.length}건 · 필터 ${total}건 · ${csPage}/${totalPages || 1}페이지`;
+
+  document.getElementById('cs-tbody').innerHTML = pageData.map(c=>`
+    <tr onclick="selectCS('${c.id}')">
+      <td>${c.date}</td>
+      <td><span class="badge b-gray">${c.channel}</span></td>
+      <td>${typeBadge(c.type)}</td>
+      <td>${c.biz}</td>
+      <td class="td-main">${c.co}</td>
+      <td class="td-truncate">${c.content}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td>${slaBadge(c.sla)}</td>
+      <td>${c.staff}</td>
+    </tr>`).join('');
+
+  // 페이지네이션 렌더
+  renderPagination(total, totalPages);
+  // 모바일 카드 갱신
+  if(window.innerWidth<=768) renderMobileCards('cs-list');
+}
+
+function renderPagination(total, totalPages) {
+  let el = document.getElementById('cs-pagination');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cs-pagination';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0;';
+    document.getElementById('cs-tbody').closest('.tbl-card').after(el);
+  }
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  // 표시할 페이지 번호 범위
+  const range = [];
+  const delta = 2;
+  for (let i = Math.max(1, csPage - delta); i <= Math.min(totalPages, csPage + delta); i++) {
+    range.push(i);
+  }
+
+  let html = '';
+  // 이전
+  html += `<button onclick="goPage(${csPage-1})" ${csPage===1?'disabled':''} style="padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px;${csPage===1?'opacity:0.4':''}">‹</button>`;
+  if (range[0] > 1) {
+    html += pageBtn(1);
+    if (range[0] > 2) html += `<span style="color:var(--text3);font-size:12px">…</span>`;
+  }
+  range.forEach(p => { html += pageBtn(p); });
+  if (range[range.length-1] < totalPages) {
+    if (range[range.length-1] < totalPages - 1) html += `<span style="color:var(--text3);font-size:12px">…</span>`;
+    html += pageBtn(totalPages);
+  }
+  // 다음
+  html += `<button onclick="goPage(${csPage+1})" ${csPage===totalPages?'disabled':''} style="padding:4px 10px;border:0.5px solid var(--border2);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px;${csPage===totalPages?'opacity:0.4':''}">›</button>`;
+  html += `<span style="font-size:11px;color:var(--text3);margin-left:4px">${total}건 중 ${Math.min((csPage-1)*CS_PAGE_SIZE+1,total)}–${Math.min(csPage*CS_PAGE_SIZE,total)}</span>`;
+  el.innerHTML = html;
+}
+
+function pageBtn(p) {
+  const active = p === csPage;
+  return `<button onclick="goPage(${p})" style="padding:4px 9px;border:0.5px solid ${active?'var(--teal-m)':'var(--border2)'};border-radius:6px;background:${active?'var(--teal-l)':'var(--surface)'};color:${active?'var(--teal)':'var(--text2)'};cursor:pointer;font-size:12px;font-weight:${active?'600':'400'}">${p}</button>`;
+}
+
+function goPage(p) {
+  const total = allCS.filter(c => {
+    const mt = typeFilter==='all'||c.type===typeFilter;
+    const mb = !breachOnly||(c.sla&&c.sla.includes('초과'));
+    const ms = !searchTerm||c.co.includes(searchTerm)||c.content.includes(searchTerm);
+    const mst = statusFilter==='all'?true:statusFilter==='active'?(c.status==='접수'||c.status==='진행 중'):c.status===statusFilter;
+    const mm = monthFilter==='all'||c.date.slice(0,7)===monthFilter;
+    return mt&&mb&&ms&&mst&&mm;
+  }).length;
+  const totalPages = Math.ceil(total / CS_PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  csPage = p;
+  renderCSTable();
+  document.getElementById('detail-panel')?.classList.remove('show');
+  document.querySelector('.main')?.scrollTo(0, 0);
+  window.scrollTo(0,0);
+}
+
+// 초과일수 추출 ("14일 초과" → 14)
+function parseOverDays(sla) {
+  if (!sla) return 0;
+  const m = sla.match(/(\d+)/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+// SLA 초과 페이지 전용 필터 상태
+let breachStatusFilter = 'active';
+let breachTypeFilter   = 'all';
+let breachSearch       = '';
+
+function renderBreachTable() {
+  const allBreach = allCS.filter(c => c.sla && c.sla.includes('초과'));
+
+  const data = allBreach
+    .filter(c => {
+      // 상태 필터
+      const ms = breachStatusFilter === 'all' ? true
+        : breachStatusFilter === 'active' ? c.status !== '완료'
+        : c.status === breachStatusFilter;
+      // 유형 필터
+      const mt = breachTypeFilter === 'all' || c.type === breachTypeFilter;
+      // 검색
+      const mq = !breachSearch || c.co.includes(breachSearch) || c.content.includes(breachSearch);
+      return ms && mt && mq;
+    })
+    .sort((a, b) => {
+      // 진행중 → 접수 → 완료 순, 같은 상태면 초과일 긴 것 위
+      const statusOrder = s => s === '진행 중' ? 0 : s === '접수' ? 1 : 2;
+      const sd = statusOrder(a.status) - statusOrder(b.status);
+      if (sd !== 0) return sd;
+      return parseOverDays(b.sla) - parseOverDays(a.sla);
+    });
+
+  const inProg = allBreach.filter(c => c.status !== '완료').length;
+  document.getElementById('breach-cnt').textContent =
+    `표시 ${data.length}건 · 진행 중 ${inProg}건 / 전체 ${allBreach.length}건`;
+  document.getElementById('breach-tbody').innerHTML = data.map(c=>`
+    <tr onclick="selectCS('${c.id}');showPage('cs-list',document.getElementById('nav-cs'))">
+      <td>${c.date}</td>
+      <td>${typeBadge(c.type)}</td>
+      <td>${c.biz}</td>
+      <td class="td-main">${c.co}</td>
+      <td class="td-truncate">${c.content}</td>
+      <td><span class="sla-ng">▲ ${c.sla}</span></td>
+      <td>${statusBadge(c.status)}</td>
+      <td>${c.staff}</td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3)">해당 건 없음</td></tr>';
+  if(window.innerWidth<=768) renderMobileCards('sla-breach');
+}
+
+// SLA 초과 전용 필터 함수
+function breachFilterStatus(v, el) {
+  breachStatusFilter = v;
+  el.closest('.filter-bar').querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderBreachTable();
+}
+function breachFilterType(v, el) {
+  breachTypeFilter = v;
+  el.closest('.filter-bar').querySelectorAll('.fbtn:not(.red)').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderBreachTable();
+}
+function breachFilterSearch(v) {
+  breachSearch = v;
+  renderBreachTable();
+}
+
+function renderDevTable() {
+  document.getElementById('dev-tbody').innerHTML = DEMO_DEV.map(d=>`
+    <tr>
+      <td>${d.no}</td>
+      <td><span class="badge b-blue">${d.cat}</span></td>
+      <td class="td-main">${d.item}</td>
+      <td>${d.date}</td>
+      <td>${d.end}</td>
+      <td><span class="badge ${d.status==='진행'?'b-amber':'b-gray'}">${d.status}</span></td>
+      <td style="font-size:11px;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.ceo}</td>
+    </tr>`).join('');
+}
+
+function renderCLevelPage() {
+  // SLA 초과 중 진행중인 건만, 진행중 상단 + 초과일 긴 순
+  const breachData = allCS
+    .filter(c => c.sla && c.sla.includes('초과') && c.status !== '완료')
+    .sort((a, b) => {
+      const statusOrder = s => s === '진행 중' ? 0 : s === '접수' ? 1 : 2;
+      const sd = statusOrder(a.status) - statusOrder(b.status);
+      if (sd !== 0) return sd;
+      return parseOverDays(b.sla) - parseOverDays(a.sla);
+    });
+  document.getElementById('c-breach-cnt').textContent = breachData.length + '건';
+  document.getElementById('clevel-breach-tbody').innerHTML = breachData.map(c=>`
+    <tr>
+      <td>${c.date}</td>
+      <td>${typeBadge(c.type)}</td>
+      <td class="td-main">${c.co}</td>
+      <td class="td-truncate">${c.content}</td>
+      <td><span class="sla-ng">▲ ${c.sla}</span></td>
+      <td>${statusBadge(c.status)}</td>
+      <td>${c.staff}</td>
+    </tr>`).join('');
+
+  // 개발 요청 미처리
+  const devPending = DEMO_DEV.filter(d => d.status === '대기' || d.status === '진행');
+  document.getElementById('clevel-dev-tbody').innerHTML = devPending.map(d=>`
+    <tr>
+      <td>${d.no}</td>
+      <td><span class="badge b-blue">${d.cat}</span></td>
+      <td class="td-main">${d.item}</td>
+      <td><span class="badge ${d.status==='진행'?'b-amber':'b-gray'}">${d.status}</span></td>
+      <td style="font-size:11px;color:var(--text2)">${d.ceo||'—'}</td>
+    </tr>`).join('');
+}
+
+// ============ CS DETAIL ============
+function selectCS(id) {
+  selectedCSId = id;
+  const cs = allCS.find(c => c.id === id);
+  if (!cs) return;
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('show');
+  document.getElementById('dp-title').textContent = cs.co + ' — ' + cs.content.slice(0,40) + (cs.content.length>40?'…':'');
+  document.getElementById('dp-date').textContent = cs.date;
+  document.getElementById('dp-channel').textContent = cs.channel;
+  document.getElementById('dp-staff').textContent = cs.staff;
+  document.getElementById('dp-type').innerHTML = typeBadge(cs.type);
+  document.getElementById('dp-biz').textContent = cs.biz;
+  document.getElementById('dp-co').textContent = cs.co;
+  document.getElementById('dp-content').textContent = cs.content;
+  document.getElementById('dp-status').innerHTML = statusBadge(cs.status);
+  document.getElementById('dp-sla').innerHTML = slaBadge(cs.sla);
+  document.getElementById('dp-memo').textContent = cs.memo || '(없음)';
+
+  // Role-based edit/delete
+  const canEdit = currentUserData && ['cs','admin'].includes(currentUserData.role);
+  document.getElementById('dp-edit-btn').style.display = canEdit ? '' : 'none';
+  document.getElementById('dp-del-btn').style.display = canEdit ? '' : 'none';
+
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function closeDetail() {
+  selectedCSId = null;
+  document.getElementById('detail-panel').classList.remove('show');
+}
+
+async function updateStatus(val) {
+  if (!val || !selectedCSId) return;
+  const cs = allCS.find(c => c.id === selectedCSId);
+  if (!cs) return;
+  cs.status = val;
+  computeSLA();
+  renderAll();
+  selectCS(selectedCSId);
+  document.getElementById('dp-status-select').value = '';
+  showToast(`상태를 '${val}'으로 변경했습니다`);
+  // Firebase 연동 시: await db.collection('cs').doc(selectedCSId).update({status: val});
+}
+
+async function deleteCS() {
+  if (!selectedCSId) return;
+  if (!confirm('이 CS 건을 삭제하시겠습니까?')) return;
+  allCS = allCS.filter(c => c.id !== selectedCSId);
+  closeDetail();
+  renderAll();
+  showToast('삭제했습니다');
+  // Firebase: await db.collection('cs').doc(selectedCSId).delete();
+}
+
+// ============ REGISTER / EDIT MODAL ============
+function openRegisterModal() {
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = 'CS 등록';
+  document.getElementById('submit-label').textContent = '등록';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-channel').value = '채널톡';
+  document.getElementById('f-type').value = '단순 문의';
+  document.getElementById('f-biz').value = '일반 렌탈';
+  document.getElementById('f-co').value = '';
+  document.getElementById('f-content').value = '';
+  document.getElementById('f-memo').value = '';
+  document.getElementById('f-status').value = '접수';
+  if (currentUserData) document.getElementById('f-staff').value = currentUserData.name || '유소미';
+  document.getElementById('modal-err').classList.remove('show');
+  document.getElementById('cs-modal').classList.add('show');
+  document.getElementById('f-type').onchange = checkTrelloPreview;
+  checkTrelloPreview();
+}
+
+function openEditModal() {
+  if (!selectedCSId) return;
+  const cs = allCS.find(c => c.id === selectedCSId);
+  if (!cs) return;
+  editingId = selectedCSId;
+  document.getElementById('modal-title-text').textContent = 'CS 수정';
+  document.getElementById('submit-label').textContent = '저장';
+  document.getElementById('f-date').value = cs.date;
+  document.getElementById('f-channel').value = cs.channel;
+  document.getElementById('f-type').value = cs.type;
+  document.getElementById('f-biz').value = cs.biz;
+  document.getElementById('f-co').value = cs.co;
+  document.getElementById('f-content').value = cs.content;
+  document.getElementById('f-memo').value = cs.memo || '';
+  document.getElementById('f-status').value = cs.status;
+  document.getElementById('f-staff').value = cs.staff;
+  document.getElementById('cs-modal').classList.add('show');
+  document.getElementById('f-type').onchange = checkTrelloPreview;
+  checkTrelloPreview();
+}
+
+function closeModal() {
+  document.getElementById('cs-modal').classList.remove('show');
+  editingId = null;
+}
+
+function checkTrelloPreview() {
+  const t = document.getElementById('f-type').value;
+  document.getElementById('trello-preview').style.display = (t === '오류' || t === '개선 요청') ? '' : 'none';
+}
+
+async function submitCS() {
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('modal-err');
+  err.classList.remove('show');
+
+  const date = document.getElementById('f-date').value;
+  const channel = document.getElementById('f-channel').value;
+  const type = document.getElementById('f-type').value;
+  const biz = document.getElementById('f-biz').value;
+  const co = document.getElementById('f-co').value.trim();
+  const content = document.getElementById('f-content').value.trim();
+  const memo = document.getElementById('f-memo').value.trim();
+  const status = document.getElementById('f-status').value;
+  const staff = document.getElementById('f-staff').value;
+
+  if (!co || !content) {
+    err.textContent = '업체명과 내용은 필수 입력사항입니다.';
+    err.classList.add('show');
+    return;
+  }
+
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  await new Promise(r => setTimeout(r, 500));
+
+  if (editingId) {
+    const cs = allCS.find(c => c.id === editingId);
+    if (cs) Object.assign(cs, {date,channel,type,biz,co,content,memo,status,staff});
+    showToast('수정했습니다 ✓');
+    // Firebase: await db.collection('cs').doc(editingId).update({...});
+  } else {
+    const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,sla:'',createdAt:new Date()};
+    allCS.unshift(newCS);
+
+    // Trello 전달 (개선요청/오류)
+    if ((type === '오류' || type === '개선 요청') && TRELLO_CONFIG.key && TRELLO_CONFIG.listId) {
+      await createTrelloCard(newCS);
+    }
+    showToast('등록 완료 ✓' + (type==='오류'||type==='개선 요청' ? ' · Trello 카드 생성' : ''));
+    // Firebase: await db.collection('cs').add({...});
+  }
+
+  computeSLA();
+  renderAll();
+  closeModal();
+  if (editingId) selectCS(editingId);
+  btn.innerHTML = '<span id="submit-label">등록</span>';
+  btn.disabled = false;
+}
+
+// ============ TRELLO INTEGRATION ============
+async function createTrelloCard(cs) {
+  if (!TRELLO_CONFIG.key || !TRELLO_CONFIG.listId) return;
+  const name = `[${cs.type}] ${cs.co} — ${cs.content.slice(0,60)}`;
+  const desc = `**접수일**: ${cs.date}\n**채널**: ${cs.channel}\n**기업구분**: ${cs.biz}\n**내용**: ${cs.content}\n**메모**: ${cs.memo||'-'}\n**담당**: ${cs.staff}`;
+  try {
+    const res = await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({idList:TRELLO_CONFIG.listId, name, desc})
+    });
+    if (res.ok) { const card = await res.json(); cs.trelloUrl = card.url; }
+  } catch(e) { console.warn('Trello 연동 실패:', e); }
+}
+
+// ============ FILTERS ============
+function filterType(t, el) {
+  typeFilter = t;
+  // 유형 row의 fbtn만 초기화 (상태 row 건드리지 않음)
+  el.closest('.filter-bar').querySelectorAll('.fbtn:not(.red)').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderCSTable();
+}
+function filterStatus(s, el) {
+  statusFilter = s;
+  el.closest('.filter-bar').querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderCSTable(true);
+}
+function filterMonth(v) {
+  monthFilter = v;
+  renderCSTable(true);
+}
+function toggleBreachOnly(el) {
+  breachOnly = !breachOnly;
+  el.classList.toggle('on', breachOnly);
+  renderCSTable(true);
+}
+function filterSearch(v) {
+  searchTerm = v;
+  renderCSTable(true);
+}
+function populateMonthFilter() {
+  const months = [...new Set(allCS.map(c => c.date.slice(0,7)))].sort().reverse();
+  const sel = document.getElementById('month-filter');
+  if (!sel) return;
+  sel.innerHTML = '<option value="all">전체 월</option>' +
+    months.map(m => {
+      const label = m.replace(/^(\d{4})-(\d{2})$/, '$1년 $2월');
+      return `<option value="${m}">${label}</option>`;
+    }).join('');
+}
+
+// ============ NAVIGATION ============
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if (el) el.classList.add('active');
+  // 모바일 탭도 동기화
+  syncMobileTab(id);
+  // 모바일이면 카드형 렌더
+  if (window.innerWidth <= 768) renderMobileCards(id);
+}
+
+function mobileNav(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  // 사이드바 nav도 동기화
+  const navMap = {'overview':'nav-item','cs-list':'nav-cs','sla-breach':null,'dev':'nav-dev','clevel':'nav-clevel'};
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  renderMobileCards(id);
+  window.scrollTo(0,0);
+}
+
+function syncMobileTab(id) {
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
+  const t = document.getElementById('mtab-'+id);
+  if (t) t.classList.add('active');
+}
+
+// 모바일 카드형 테이블 렌더러
+function renderMobileCards(pageId) {
+  if (window.innerWidth > 768) return;
+
+  if (pageId === 'cs-list') {
+    let data = allCS.filter(c => {
+      const mt = typeFilter==='all'||c.type===typeFilter;
+      const mb = !breachOnly||(c.sla&&c.sla.includes('초과'));
+      const ms = !searchTerm||c.co.includes(searchTerm)||c.content.includes(searchTerm);
+      const mst = statusFilter==='all'?true:statusFilter==='active'?(c.status==='접수'||c.status==='진행 중'):c.status===statusFilter;
+      const mm = monthFilter==='all'||c.date.slice(0,7)===monthFilter;
+      return mt&&mb&&ms&&mst&&mm;
+    }).sort((a,b)=>b.date.localeCompare(a.date));
+
+    const totalPages = Math.ceil(data.length / CS_PAGE_SIZE);
+    const pageData = data.slice((csPage-1)*CS_PAGE_SIZE, csPage*CS_PAGE_SIZE);
+
+    let container = document.getElementById('cs-mobile-cards');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'cs-mobile-cards';
+      container.className = 'mobile-cards';
+      document.getElementById('cs-tbody').closest('.tbl-card').appendChild(container);
+    }
+    container.innerHTML = pageData.map(c => `
+      <div class="m-cs-card" onclick="selectCS('${c.id}')">
+        <div class="m-cs-top">
+          ${typeBadge(c.type)}
+          ${statusBadge(c.status)}
+          <span class="m-cs-sla">${slaBadge(c.sla)}</span>
+        </div>
+        <div class="m-cs-title">${c.co} — ${c.content.slice(0,50)}${c.content.length>50?'…':''}</div>
+        <div class="m-cs-meta">
+          <span>${c.date}</span>
+          <span>${c.biz}</span>
+          <span>${c.channel}</span>
+          <span>${c.staff}</span>
+        </div>
+      </div>`).join('') || '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">해당 건 없음</div>';
+  }
+
+  if (pageId === 'sla-breach') {
+    const allBreach = allCS.filter(c => c.sla && c.sla.includes('초과'));
+    const data = allBreach.filter(c => {
+      const ms = breachStatusFilter==='all'?true:breachStatusFilter==='active'?c.status!=='완료':c.status===breachStatusFilter;
+      const mt = breachTypeFilter==='all'||c.type===breachTypeFilter;
+      const mq = !breachSearch||c.co.includes(breachSearch)||c.content.includes(breachSearch);
+      return ms&&mt&&mq;
+    }).sort((a,b)=>{
+      const so=s=>s==='진행 중'?0:s==='접수'?1:2;
+      const sd=so(a.status)-so(b.status);
+      return sd!==0?sd:parseOverDays(b.sla)-parseOverDays(a.sla);
+    });
+
+    let container = document.getElementById('breach-mobile-cards');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'breach-mobile-cards';
+      container.className = 'mobile-cards';
+      document.getElementById('breach-tbody').closest('.tbl-card').appendChild(container);
+    }
+    container.innerHTML = data.map(c=>`
+      <div class="m-cs-card" onclick="selectCS('${c.id}');mobileNav('cs-list',document.getElementById('mtab-cs-list'))">
+        <div class="m-cs-top">
+          ${typeBadge(c.type)}
+          ${statusBadge(c.status)}
+          <span class="m-cs-sla"><span class="sla-ng">▲ ${c.sla}</span></span>
+        </div>
+        <div class="m-cs-title">${c.co} — ${c.content.slice(0,50)}${c.content.length>50?'…':''}</div>
+        <div class="m-cs-meta">
+          <span>${c.date}</span>
+          <span>${c.biz}</span>
+          <span>${c.staff}</span>
+        </div>
+      </div>`).join('') || '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">해당 건 없음</div>';
+  }
+}
+
+// 배지 동기화 (탭바)
+function syncMobileBadges() {
+  const breach = allCS.filter(c=>c.sla&&c.sla.includes('초과')&&c.status!=='완료').length;
+  const pending = allCS.filter(c=>c.status!=='완료').length;
+  const bb = document.getElementById('mtab-badge-breach');
+  const pb = document.getElementById('mtab-badge-pending');
+  if(bb) { bb.textContent=breach; bb.style.display=breach>0?'':'none'; }
+  if(pb) { pb.textContent=pending; pb.style.display=pending>0?'':'none'; }
+}
+
+// ============ CONFIG ============
+function saveFirebaseConfig() {
+  const cfg = {
+    apiKey: document.getElementById('cfg-apiKey').value,
+    authDomain: document.getElementById('cfg-authDomain').value,
+    projectId: document.getElementById('cfg-projectId').value,
+    appId: document.getElementById('cfg-appId').value,
+  };
+  Object.entries(cfg).forEach(([k,v]) => { if(v) localStorage.setItem('fb_'+k, v); });
+  showToast('Firebase 설정이 저장되었습니다. 페이지를 새로고침해주세요.');
+}
+function saveTrelloConfig() {
+  const k = document.getElementById('cfg-trelloKey').value;
+  const t = document.getElementById('cfg-trelloToken').value;
+  const l = document.getElementById('cfg-trelloListId').value;
+  if(k) localStorage.setItem('trello_key', k);
+  if(t) localStorage.setItem('trello_token', t);
+  if(l) localStorage.setItem('trello_listId', l);
+  TRELLO_CONFIG.key = k; TRELLO_CONFIG.token = t; TRELLO_CONFIG.listId = l;
+  showToast('Trello 설정이 저장되었습니다 ✓');
+}
+async function createUser() {
+  showToast('Firebase 연결 후 계정 생성이 가능합니다');
+}
+
+// ============ TOAST ============
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ============ KEYBOARD ============
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeDetail(); }
+});
+</script>
+</body>
+</html>
