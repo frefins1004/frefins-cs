@@ -960,6 +960,9 @@ function checkMagicLink() {
 function doMagicLogin() {
   if (!magicUserData) return;
   currentUserData = magicUserData;
+  // 매직 화면 숨기기
+  document.getElementById('magic-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
   initApp();
   // URL에서 토큰 파라미터 제거 (보안)
   const url = new URL(window.location.href);
