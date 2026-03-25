@@ -115,11 +115,11 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,'Apple SD
 .page-sub{font-size:12px;color:var(--text3);margin-top:3px}
 
 /* Metric cards */
-.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.m-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px}
-.m-label{font-size:11px;color:var(--text3);margin-bottom:5px}
-.m-val{font-size:24px;font-weight:700;line-height:1}
-.m-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.metrics-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.m-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px;min-width:0}
+.m-label{font-size:11px;color:var(--text3);margin-bottom:7px;font-weight:500}
+.m-val{font-size:26px;font-weight:700;line-height:1.1;color:var(--text1)}
+.m-sub{font-size:11px;color:var(--text3);margin-top:5px}
 .m-card.red .m-val{color:var(--red)}
 .m-card.green .m-val{color:var(--teal)}
 .m-card.amber .m-val{color:var(--amber)}
@@ -259,8 +259,10 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
   /* 인사이트 그리드 */
   #page-clevel > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
   .ceo-grid{grid-template-columns:1fr 1fr}
-  .report-header{flex-direction:column;gap:10px}
-  .key-metrics{grid-template-columns:repeat(3,1fr)}
+  .report-header{flex-direction:column;gap:12px;align-items:stretch}
+  .key-metrics{grid-template-columns:repeat(3,1fr);width:100%}
+  .key-metric{padding:8px 6px}
+  .key-metric-val{font-size:18px}
 
   /* 섹션 구분선 */
   .section-divider{margin:14px 0 10px}
@@ -312,12 +314,12 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* 이중 지표 카드 */
-.m-card .m-dual{display:flex;gap:0;margin-top:4px}
-.m-dual-item{flex:1;padding-right:12px}
-.m-dual-item+.m-dual-item{padding-left:12px;padding-right:0;border-left:0.5px solid var(--border2)}
-.m-dual-main{font-size:22px;font-weight:700;line-height:1}
-.m-dual-sub{font-size:11px;color:var(--text3);margin-top:2px}
-.m-basis{font-size:10px;color:var(--text3);margin-top:6px;padding-top:5px;border-top:0.5px solid var(--border);line-height:1.5}
+.m-card .m-dual{display:flex !important;flex-direction:row !important;gap:0;margin-top:8px;width:100%}
+.m-dual-item{flex:1 1 0;min-width:0;padding-right:14px}
+.m-dual-item+.m-dual-item{padding-left:14px;padding-right:0;border-left:0.5px solid var(--border2)}
+.m-dual-main{font-size:20px;font-weight:700;line-height:1.1;color:var(--text1);display:block}
+.m-dual-sub{font-size:11px;color:var(--text3);margin-top:3px;display:block}
+.m-basis{font-size:10px;color:var(--text3);margin-top:8px;padding-top:6px;border-top:0.5px solid var(--border);line-height:1.6;display:block}
 
 /* 섹션 구분선 */
 .section-divider{margin:20px 0 16px;display:flex;align-items:center;gap:10px}
@@ -338,13 +340,13 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 .sla-std-table tr:last-child td{border-bottom:none}
 
 /* 월간 보고 헤더 */
-.report-header{background:var(--teal-l);border:0.5px solid var(--teal-m);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.report-header{background:var(--teal-l);border:0.5px solid var(--teal-m);border-radius:var(--r);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .report-month{font-size:15px;font-weight:700;color:var(--teal)}
-.report-meta{font-size:11px;color:var(--teal);opacity:0.8}
-.key-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
-.key-metric{text-align:center;padding:10px}
-.key-metric-val{font-size:20px;font-weight:700}
-.key-metric-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+.report-meta{font-size:11px;color:var(--teal);opacity:0.8;margin-top:3px}
+.key-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0}
+.key-metric{text-align:center;padding:10px 14px;background:var(--surface);border-radius:var(--r-sm);border:0.5px solid var(--border)}
+.key-metric-val{font-size:22px;font-weight:700;line-height:1.1}
+.key-metric-lbl{font-size:11px;color:var(--text3);margin-top:4px}
 </style>
 </head>
 <body>
