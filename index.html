@@ -369,7 +369,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     <div class="field"><label>이메일</label><input type="email" id="login-email" placeholder="이메일 입력"></div>
     <div class="field"><label>비밀번호</label><input type="password" id="login-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div class="error-msg" id="login-err"></div>
-    <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn" style="margin-top:16px">로그인</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+      <input type="checkbox" id="remember-me" style="width:15px;height:15px;cursor:pointer;accent-color:#17996e">
+      <label for="remember-me" style="font-size:13px;color:#5a5955;cursor:pointer;user-select:none">로그인 정보 저장</label>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn" style="margin-top:12px">로그인</button>
     <div id="demo-accounts" style="margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)">
       <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:600">테스트 계정 (Firebase 설정 전)</div>
       <div style="display:flex;flex-direction:column;gap:5px">
@@ -987,6 +991,20 @@ if (typeof ChartDataLabels !== 'undefined') {
 }
 
 // Firebase 연결 여부 확인 → 테스트 계정 블록 숨김
+// 저장된 로그인 정보 불러오기
+function loadSavedCredentials() {
+  try {
+    const saved = localStorage.getItem('frp_credentials');
+    if (saved) {
+      const { email, pw } = JSON.parse(saved);
+      document.getElementById('login-email').value = email || '';
+      document.getElementById('login-pw').value = pw || '';
+      document.getElementById('remember-me').checked = true;
+    }
+  } catch(e) {}
+}
+loadSavedCredentials();
+
 function checkFirebaseMode() {
   const isConfigured = localStorage.getItem('fb_apiKey') &&
     localStorage.getItem('fb_apiKey') !== 'YOUR_API_KEY';
@@ -1060,10 +1078,20 @@ async function doLogin() {
   const pw = document.getElementById('login-pw').value;
   const btn = document.getElementById('login-btn');
   const err = document.getElementById('login-err');
+  const remember = document.getElementById('remember-me')?.checked;
   err.classList.remove('show');
   btn.innerHTML = '<span class="spinner"></span>';
   btn.disabled = true;
   await new Promise(r => setTimeout(r, 600));
+
+  // 로그인 정보 저장/삭제
+  try {
+    if (remember) {
+      localStorage.setItem('frp_credentials', JSON.stringify({ email, pw }));
+    } else {
+      localStorage.removeItem('frp_credentials');
+    }
+  } catch(e) {}
 
   // Demo mode
   if (DEMO_USERS[email] && DEMO_USERS[email].pw === pw) {
