@@ -380,7 +380,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     <div id="demo-accounts" style="margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)">
       <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:600">테스트 계정 (Firebase 설정 전)</div>
       <div style="display:flex;flex-direction:column;gap:5px">
-        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('somi@frefins.com','cs123!')">👩 소미님 (Operation팀)</button>
+        <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('sm.you@frefins.com','cs123!')">👩 소미님 (Operation팀)</button>
         <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('op@frefins.com','op123!')">👩 Operation팀 (추가 계정)</button>
         <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('dev@frefins.com','dev123!')">👨‍💻 개발팀</button>
         <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('ceo@frefins.com','ceo123!')">👑 C-Level</button>
@@ -555,15 +555,24 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
       <div class="page-header"><div class="page-title">C-Level 핵심 현황</div><div class="page-sub" id="clevel-sub">경영진 즉시 확인 지표</div></div>
 
       <!-- 월간 보고 헤더 -->
-      <div class="report-header">
+      <div class="report-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
         <div>
           <div class="report-month" id="clevel-month-title">— 월 CS 운영 현황</div>
           <div class="report-meta">프리핀스 서비스 고객 응대 현황</div>
         </div>
-        <div class="key-metrics">
-          <div class="key-metric"><div class="key-metric-val" id="c-month-total" style="color:var(--teal)">—</div><div class="key-metric-lbl">이번 달 접수</div></div>
-          <div class="key-metric"><div class="key-metric-val" id="c-month-rate" style="color:var(--teal)">—</div><div class="key-metric-lbl">처리 완료율</div></div>
-          <div class="key-metric"><div class="key-metric-val" id="c-breach" style="color:var(--red)">—</div><div class="key-metric-lbl">SLA 초과 누적</div></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex-shrink:0;min-width:280px">
+          <div style="text-align:center;padding:10px 16px;background:var(--surface);border-radius:8px;border:0.5px solid var(--border)">
+            <div id="c-month-total" style="font-size:22px;font-weight:700;color:var(--teal);line-height:1.1">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">이번 달 접수</div>
+          </div>
+          <div style="text-align:center;padding:10px 16px;background:var(--surface);border-radius:8px;border:0.5px solid var(--border)">
+            <div id="c-month-rate" style="font-size:22px;font-weight:700;color:var(--teal);line-height:1.1">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">처리 완료율</div>
+          </div>
+          <div style="text-align:center;padding:10px 16px;background:var(--surface);border-radius:8px;border:0.5px solid var(--border)">
+            <div id="c-breach" style="font-size:22px;font-weight:700;color:var(--red);line-height:1.1">—</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">SLA 초과 누적</div>
+          </div>
         </div>
       </div>
 
@@ -925,7 +934,7 @@ const MAGIC_TOKENS = {
   'oocuRRAuoTkjeGMS3muCcxPLUWy0urwz': { name: '대표님', role: 'clevel', avatar: 'CEO' },
   'ppT4RtPp5sIO-zdYhzIcmfgdTAB5tHBX': { name: '개발팀', role: 'dev',    avatar: '개발' },
   // 추가 토큰은 아래에 계속 추가
-  // 'NEW_TOKEN_HERE': { name: '소미님', role: 'cs', avatar: '소미' },
+  // 'NEW_TOKEN_HERE': { name: '소미님', role: 'cs', avatar: '소미' },  // sm.you@frefins.com
 };
 
 let magicUserData = null;
@@ -1012,7 +1021,7 @@ const TRELLO_CONFIG = {
 
 // ============ DEMO MODE (Firebase 설정 전) ============
 const DEMO_USERS = {
-  'somi@frefins.com':  {pw:'cs123!', name:'유소미', role:'cs', avatar:'소미'},
+  'sm.you@frefins.com': {pw:'cs123!', name:'유소미', role:'cs', avatar:'소미'},
   'op@frefins.com':     {pw:'op123!',  name:'Operation팀', role:'cs', avatar:'OP'},
   'dev@frefins.com':   {pw:'dev123!', name:'개발팀', role:'dev', avatar:'개발'},
   'ceo@frefins.com':   {pw:'ceo123!', name:'C-Level', role:'clevel', avatar:'CEO'},
