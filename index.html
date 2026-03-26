@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" style="color-scheme:light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,20 +46,13 @@
   --r: 12px;
   --r-sm: 8px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #181816; --surface: #222220; --surface2: #2a2a28; --surface3: #323230;
-    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
-    --text1: #e8e6df; --text2: #b0ae a6; --text3: #6c6a63;
-    --teal-l: #042e22; --red-l: #3a1010; --amber-l: #2e1a04; --blue-l: #091e38; --purple-l: #1c1945;
-  }
-}
+/* 다크모드 비활성화 - 라이트 모드 고정 */
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text1);font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+body{background:#f5f4f1 !important;color:#181816 !important;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
 
 /* ============ LOGIN SCREEN ============ */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.login-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--r);padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow)}
+.login-card{background:#ffffff;border:0.5px solid rgba(0,0,0,0.14);border-radius:var(--r);padding:40px 36px;width:100%;max-width:400px;box-shadow:var(--shadow)}
 .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
 .login-dot{width:10px;height:10px;background:var(--teal-m);border-radius:50%}
 .login-brand{font-size:18px;font-weight:700;color:var(--text1)}
@@ -86,7 +79,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,'Apple SD
 #app-screen.visible{display:grid}
 
 /* Sidebar */
-.sidebar{background:var(--surface);border-right:0.5px solid var(--border2);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar{background:#ffffff;border-right:0.5px solid rgba(0,0,0,0.14);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
 .sidebar-top{padding:18px 16px 14px;border-bottom:0.5px solid var(--border)}
 .logo-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .logo-dot{width:8px;height:8px;background:var(--teal-m);border-radius:50%}
@@ -986,19 +979,7 @@ function showNormalLogin() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-// 페이지 로드 시 매직 링크 확인, 없으면 저장된 세션 복원
-if (!checkMagicLink()) {
-  try {
-    const saved = localStorage.getItem('frp_session');
-    if (saved) {
-      const userData = JSON.parse(saved);
-      if (userData && userData.role) {
-        currentUserData = userData;
-        initApp();
-      }
-    }
-  } catch(e) {}
-}
+// 페이지 로드 시 초기화 → 스크립트 맨 끝에서 실행
 
 // Chart.js datalabels 전역 등록
 if (typeof ChartDataLabels !== 'undefined') {
@@ -1013,6 +994,8 @@ function checkFirebaseMode() {
   if (demoEl) demoEl.style.display = isConfigured ? 'none' : '';
 }
 checkFirebaseMode();
+
+
 
 // ============ FIREBASE CONFIG ============
 // 실제 Firebase 설정값으로 교체하세요
@@ -1296,7 +1279,7 @@ function renderStats() {
 }
 
 function renderCharts() {
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = false; // 라이트 모드 고정
   const gc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
   const tc = isDark ? '#6c6a63' : '#888780';
 
@@ -2087,6 +2070,26 @@ function showToast(msg) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); closeDetail(); }
 });
+
+// ── 페이지 로드 초기화 (모든 함수·변수 정의 완료 후 실행) ──
+(function init() {
+  // 1. 매직 링크 파라미터 확인
+  if (checkMagicLink()) return;
+
+  // 2. localStorage 세션 복원
+  try {
+    const saved = localStorage.getItem('frp_session');
+    if (saved) {
+      const userData = JSON.parse(saved);
+      if (userData && userData.role) {
+        currentUserData = userData;
+        initApp();
+        return;
+      }
+    }
+  } catch(e) {}
+  // 3. 세션 없음 → 로그인 화면 유지 (기본값)
+})();
 </script>
 </body>
 </html>
