@@ -884,7 +884,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     </div>
     <div class="trello-box" id="trello-preview" style="display:none">
       <div class="trello-label">📋 Trello 자동 전달</div>
-      <div class="trello-status">유형이 <strong>오류</strong> 또는 <strong>개선 요청</strong>인 경우 개발팀 Trello 보드에 자동으로 카드가 생성됩니다.</div>
+      <div class="trello-status">유형이 <strong>오류·개선 요청·수정·삭제</strong>인 경우 Trello "요청" 컬럼에 카드가 자동 생성됩니다.<br>카드에 <strong>담당자 태그 · 레이블 · SLA 마감일</strong>이 자동 설정됩니다.</div>
     </div>
     <div class="error-msg" id="modal-err"></div>
     <div class="modal-actions">
@@ -1026,9 +1026,14 @@ const FIREBASE_CONFIG = {
 };
 
 const TRELLO_CONFIG = {
-  key: localStorage.getItem('trello_key') || '',
-  token: localStorage.getItem('trello_token') || '',
-  listId: localStorage.getItem('trello_listId') || ''
+  key:    localStorage.getItem('trello_key')    || '',
+  token:  localStorage.getItem('trello_token')  || '',
+  listId: localStorage.getItem('trello_listId') || '',
+  boardId: localStorage.getItem('trello_boardId') || '',
+  // 유형별 레이블 ID (Trello 보드에서 미리 생성 후 ID 입력)
+  labelIds: JSON.parse(localStorage.getItem('trello_labelIds') || '{}'),
+  // 담당자별 Trello Member ID
+  memberIds: JSON.parse(localStorage.getItem('trello_memberIds') || '{}'),
 };
 
 // ============ DEMO MODE (Firebase 설정 전) ============
@@ -1874,11 +1879,14 @@ async function submitCS() {
     const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
 
-    // Trello 전달 (개선요청/오류)
-    if ((type === '오류' || type === '개선 요청') && TRELLO_CONFIG.key && TRELLO_CONFIG.listId) {
+    // Trello 전달 (단순문의 제외 전체 유형)
+    const trelloTypes = ['오류', '개선 요청', '수정', '삭제'];
+    if (trelloTypes.includes(type) && TRELLO_CONFIG.key && TRELLO_CONFIG.listId) {
       await createTrelloCard(newCS);
+      showToast('등록 완료 ✓ · Trello 카드 자동 생성됨');
+    } else {
+      showToast('등록 완료 ✓');
     }
-    showToast('등록 완료 ✓' + (type==='오류'||type==='개선 요청' ? ' · Trello 카드 생성' : ''));
     // Firebase: await db.collection('cs').add({...});
   }
 
@@ -1891,18 +1899,82 @@ async function submitCS() {
 }
 
 // ============ TRELLO INTEGRATION ============
+
+// 유형 → 레이블 색상 매핑 (Trello 기본 색상)
+const TRELLO_LABEL_COLOR = {
+  '오류': 'red',
+  '개선 요청': 'blue',
+  '수정': 'green',
+  '삭제': 'yellow',
+  '단순 문의': 'sky',
+};
+
+// 심각도 계산 (S1~S4)
+function getSeverity(cs) {
+  if (cs.type === '오류') return 'S2 (High)';
+  if (cs.type === '개선 요청') return 'S3 (Medium)';
+  return 'S4 (Low)';
+}
+
 async function createTrelloCard(cs) {
   if (!TRELLO_CONFIG.key || !TRELLO_CONFIG.listId) return;
-  const name = `[${cs.type}] ${cs.co} — ${cs.content.slice(0,60)}`;
-  const desc = `**접수일**: ${cs.date}\n**채널**: ${cs.channel}\n**기업구분**: ${cs.biz}\n**내용**: ${cs.content}\n**메모**: ${cs.memo||'-'}\n**담당**: ${cs.staff}`;
+
+  // 카드 제목: [유형][심각도] 업체명 — 내용
+  const severity = getSeverity(cs);
+  const name = `[${cs.type}] [${severity}] ${cs.co} — ${cs.content.slice(0,50)}`;
+
+  // 카드 설명: Trello 마크다운 형식
+  const desc = (function() {
+    const d = [];
+    d.push('## 접수 정보');
+    d.push('접수일: ' + cs.date + ' | 채널: ' + cs.channel + ' | 기업구분: ' + cs.biz);
+    d.push('업체명: ' + cs.co + ' | 유형: ' + cs.type + ' | 심각도: ' + severity);
+    d.push('담당자: ' + cs.staff);
+    d.push('');
+    d.push('## 내용');
+    d.push(cs.content);
+    if (cs.memo) { d.push(''); d.push('메모: ' + cs.memo); }
+    d.push('');
+    d.push('SLA 기준: 오류 7영업일 / 개선요청 14일 이내 피드백');
+    d.push('자동생성: ' + new Date().toLocaleString('ko-KR'));
+    return d.join('\n');
+  })()
+
+  // 마감일: 유형별 SLA 기준
+  const SLA_DAYS = {'오류':7,'개선 요청':14,'수정':3,'삭제':3,'단순 문의':1};
+  const dueDate = new Date(cs.date);
+  dueDate.setDate(dueDate.getDate() + (SLA_DAYS[cs.type] || 7));
+  const due = dueDate.toISOString();
+
+  // 레이블 ID (설정된 경우)
+  const labelId = TRELLO_CONFIG.labelIds?.[cs.type];
+  // 담당자 멤버 ID (설정된 경우)
+  const memberId = TRELLO_CONFIG.memberIds?.[cs.staff];
+
+  // 카드 생성 요청 바디
+  const body = {
+    idList: TRELLO_CONFIG.listId,
+    name,
+    desc,
+    due,
+    ...(labelId ? { idLabels: [labelId] } : {}),
+    ...(memberId ? { idMembers: [memberId] } : {}),
+  };
+
   try {
-    const res = await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({idList:TRELLO_CONFIG.listId, name, desc})
-    });
-    if (res.ok) { const card = await res.json(); cs.trelloUrl = card.url; }
-  } catch(e) { console.warn('Trello 연동 실패:', e); }
+    const res = await fetch(
+      `https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`,
+      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }
+    );
+    if (res.ok) {
+      const card = await res.json();
+      cs.trelloUrl = card.url;
+      cs.trelloCardId = card.id;
+      console.log('Trello 카드 생성:', card.url);
+    } else {
+      console.warn('Trello 카드 생성 실패:', res.status, await res.text());
+    }
+  } catch(e) { console.warn('Trello 연동 오류:', e); }
 }
 
 // ============ FILTERS ============
@@ -2073,14 +2145,64 @@ function saveFirebaseConfig() {
   showToast('Firebase 설정이 저장되었습니다. 페이지를 새로고침해주세요.');
 }
 function saveTrelloConfig() {
-  const k = document.getElementById('cfg-trelloKey').value;
-  const t = document.getElementById('cfg-trelloToken').value;
-  const l = document.getElementById('cfg-trelloListId').value;
+  const k  = document.getElementById('cfg-trelloKey').value.trim();
+  const t  = document.getElementById('cfg-trelloToken').value.trim();
+  const b  = document.getElementById('cfg-trelloBoardId').value.trim();
+  const l  = document.getElementById('cfg-trelloListId').value.trim();
+  const lError   = document.getElementById('cfg-label-error').value.trim();
+  const lImprove = document.getElementById('cfg-label-improve').value.trim();
+  const mSomi    = document.getElementById('cfg-member-somi').value.trim();
+  const mSojin   = document.getElementById('cfg-member-sojin').value.trim();
+  const mSua     = document.getElementById('cfg-member-sua').value.trim();
+  const mHyomin  = document.getElementById('cfg-member-hyomin').value.trim();
+
   if(k) localStorage.setItem('trello_key', k);
   if(t) localStorage.setItem('trello_token', t);
+  if(b) localStorage.setItem('trello_boardId', b);
   if(l) localStorage.setItem('trello_listId', l);
-  TRELLO_CONFIG.key = k; TRELLO_CONFIG.token = t; TRELLO_CONFIG.listId = l;
+
+  const labelIds = {};
+  if(lError)   labelIds['오류'] = lError;
+  if(lImprove) labelIds['개선 요청'] = lImprove;
+  localStorage.setItem('trello_labelIds', JSON.stringify(labelIds));
+
+  const memberIds = {};
+  if(mSomi)   memberIds['유소미'] = mSomi;
+  if(mSojin)  memberIds['안소진'] = mSojin;
+  if(mSua)    memberIds['김수아'] = mSua;
+  if(mHyomin) memberIds['김효민'] = mHyomin;
+  localStorage.setItem('trello_memberIds', JSON.stringify(memberIds));
+
+  TRELLO_CONFIG.key = k; TRELLO_CONFIG.token = t;
+  TRELLO_CONFIG.boardId = b; TRELLO_CONFIG.listId = l;
+  TRELLO_CONFIG.labelIds = labelIds;
+  TRELLO_CONFIG.memberIds = memberIds;
+
   showToast('Trello 설정이 저장되었습니다 ✓');
+}
+
+// 연결 테스트
+async function testTrelloConnection() {
+  const el = document.getElementById('trello-test-result');
+  el.textContent = '테스트 중...';
+  const k = TRELLO_CONFIG.key || document.getElementById('cfg-trelloKey').value.trim();
+  const t = TRELLO_CONFIG.token || document.getElementById('cfg-trelloToken').value.trim();
+  const l = TRELLO_CONFIG.listId || document.getElementById('cfg-trelloListId').value.trim();
+  if (!k || !t || !l) { el.textContent = '❌ API Key, Token, List ID를 모두 입력해주세요'; el.style.color='var(--red)'; return; }
+  try {
+    const res = await fetch(`https://api.trello.com/1/lists/${l}?key=${k}&token=${t}`);
+    if (res.ok) {
+      const data = await res.json();
+      el.textContent = `✅ 연결 성공! 리스트: "${data.name}"`;
+      el.style.color = 'var(--teal)';
+    } else {
+      el.textContent = `❌ 연결 실패 (${res.status}) — API Key/Token/List ID 확인 필요`;
+      el.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    el.textContent = '❌ 네트워크 오류 — CORS 제한으로 직접 테스트 불가. GitHub Pages에서 확인해주세요.';
+    el.style.color = 'var(--amber)';
+  }
 }
 async function createUser() {
   showToast('Firebase 연결 후 계정 생성이 가능합니다');
