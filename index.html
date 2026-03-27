@@ -536,7 +536,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <div style="position:relative;height:190px"><canvas id="chart-monthly"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-ttl">유형별 접수 현황 (건수 내림차순)</div>
+          <div class="chart-ttl">유형별 접수 현황 (26년 누적)</div>
           <div style="position:relative;height:210px"><canvas id="chart-type"></canvas></div>
         </div>
       </div>
@@ -547,7 +547,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <div style="position:relative;height:180px"><canvas id="chart-biz"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-ttl">이번 달 유형별 현황</div>
+          <div class="chart-ttl">유형별 현황 (이번 달 · 26년 3월)</div>
           <div style="position:relative;height:180px"><canvas id="chart-month-type"></canvas></div>
         </div>
       </div>
@@ -1422,8 +1422,10 @@ function renderCharts() {
         y:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
            max: Math.ceil(Math.max(...totals, 10) * 1.25 / 10) * 10,
            title:{display:true,text:'건수',color:tc,font:{size:9}}},
-        y2:{position:'right',grid:{display:false},min:0,max:100,
-            ticks:{color:'#2e7fd4',font:{size:10},callback:v=>v+'%'},
+        y2:{position:'right',grid:{display:false},min:0,max:110,
+            ticks:{color:'#2e7fd4',font:{size:10},
+              callback:v=>v<=100?v+'%':'',
+              stepSize:10},
             title:{display:true,text:'완료율',color:'#2e7fd4',font:{size:9}}}
       }
     }
@@ -1432,7 +1434,7 @@ function renderCharts() {
   // ── 차트 2: 유형별 수평 막대 (내림차순, 끝 건수 표기) ──
   const typeCnt = {};
   allCS.forEach(c => { typeCnt[c.type]=(typeCnt[c.type]||0)+1; });
-  const typeSorted = Object.entries(typeCnt).sort((a,b)=>a[1]-b[1]); // 오름차순 = 차트에서 위→아래 내림차순
+  const typeSorted = Object.entries(typeCnt).sort((a,b)=>b[1]-a[1]); // 내림차순 = 큰값 위
   const typeLabels = typeSorted.map(([k])=>k);
   const typeVals   = typeSorted.map(([,v])=>v);
   const typeColors = ['#6b63cc','#e8960e','#2e7fd4','#de4545','#17996e'];
@@ -1463,14 +1465,19 @@ function renderCharts() {
           anchor:'end',align:'end',
           color: isDark?'#b0aea6':'#5a5955',
           font:{size:11,weight:'600'},
-          formatter: v=>v+'건'
+          formatter: (v,ctx)=>{
+            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const pct = total>0?Math.round(v/total*100):0;
+            return v+'건('+pct+'%)';
+          }
         }
       },
       scales:{
-        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
+        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
+          max: Math.ceil(Math.max(...typeVals)*1.45/10)*10},
         y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
       },
-      layout:{padding:{right:40}}
+      layout:{padding:{right:70}}
     }
   });
 
@@ -1480,7 +1487,7 @@ function renderCharts() {
     const b = (!c.biz||c.biz==='?'||c.biz==='') ? '기타' : c.biz;
     bizRaw[b]=(bizRaw[b]||0)+1;
   });
-  const bizSorted = Object.entries(bizRaw).sort((a,b)=>a[1]-b[1]);
+  const bizSorted = Object.entries(bizRaw).sort((a,b)=>b[1]-a[1]); // 내림차순 = 큰값 위
   const bizLabels = bizSorted.map(([k])=>k);
   const bizVals   = bizSorted.map(([,v])=>v);
   const bizColorMap = {'일반 렌탈':'#17996e','렌트카':'#2e7fd4','바이크':'#e8960e','금융':'#6b63cc','FRP 공통':'#de4545','기타':'#888'};
@@ -1493,7 +1500,7 @@ function renderCharts() {
   allCS.filter(c=>c.date.slice(0,7)===thisYM2).forEach(c=>{
     monthTypeRaw[c.type]=(monthTypeRaw[c.type]||0)+1;
   });
-  const mtSorted = Object.entries(monthTypeRaw).sort((a,b)=>a[1]-b[1]);
+  const mtSorted = Object.entries(monthTypeRaw).sort((a,b)=>b[1]-a[1]); // 내림차순 = 큰값 위
   const mtCanvas = document.getElementById('chart-month-type');
   if (window._mtChart) window._mtChart.destroy();
   if (mtCanvas && mtSorted.length) {
@@ -1514,17 +1521,21 @@ function renderCharts() {
           tooltip:{callbacks:{label:ctx=>ctx.raw+'건'}},
           datalabels:{anchor:'end',align:'end',
             color:isDark?'#b0aea6':'#5a5955',font:{size:11,weight:'600'},
-            formatter:v=>v+'건'}},
+            formatter:(v,ctx)=>{
+              const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const pct=total>0?Math.round(v/total*100):0;
+              return v+'건('+pct+'%)';
+            }}},
         scales:{
           x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
           y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
         },
-        layout:{padding:{right:40}}
+        layout:{padding:{right:70}}
       }
     });
   }
 
-  if (!bizCanvas) return;
+  if (bizCanvas) {
   if (window._bizChart) window._bizChart.destroy();
   window._bizChart = new Chart(bizCanvas, {
     type:'bar',
@@ -1549,16 +1560,18 @@ function renderCharts() {
           anchor:'end',align:'end',
           color:isDark?'#b0aea6':'#5a5955',
           font:{size:11,weight:'600'},
-          formatter:v=>v+'건'
+          formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return v+'건('+(t>0?Math.round(v/t*100):0)+'%)';}
         }
       },
       scales:{
-        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},
+        x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
+          max: Math.ceil(Math.max(...bizVals)*1.5/10)*10},
         y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}
       },
-      layout:{padding:{right:40}}
+      layout:{padding:{right:70}}
     }
   });
+  } // end bizCanvas
 }
 
 function typeBadge(t) {
