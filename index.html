@@ -1364,10 +1364,12 @@ function renderCharts() {
     if (cs.sla && cs.sla.includes('초과')) byMonth[m].breach++;
     if (cs.status === '완료') byMonth[m].done++;
   });
-  const months = Object.keys(byMonth).sort().slice(-9);
+  // 그래프는 2026년 데이터만 표시 (CS 목록에는 25년 데이터 유지)
+  const allMonths = Object.keys(byMonth).sort();
+  const months = allMonths.filter(m => m >= '2026-01');
   const labels = months.map(m => {
     const [y,mo] = m.split('-');
-    return (y==='2025'?'25년 ':'26년 ') + parseInt(mo) + '월';
+    return '26년 ' + parseInt(mo) + '월';
   });
   const totals  = months.map(m => byMonth[m].total);
   const breaches = months.map(m => byMonth[m].breach);
@@ -1383,25 +1385,42 @@ function renderCharts() {
       datasets: [
         {label:'접수',data:totals,
           backgroundColor:isDark?'rgba(23,153,110,0.35)':'rgba(23,153,110,0.22)',
-          borderColor:'#0a6650',borderWidth:1,yAxisID:'y'},
+          borderColor:'#0a6650',borderWidth:1,yAxisID:'y',
+          datalabels:{display:true,anchor:'end',align:'end',
+            color:'#0a6650',font:{size:10,weight:'600'},
+            formatter:v=>v>0?v+'건':''}},
         {label:'SLA 초과',data:breaches,
           backgroundColor:isDark?'rgba(222,69,69,0.5)':'rgba(222,69,69,0.25)',
-          borderColor:'#9e2828',borderWidth:1,yAxisID:'y'},
+          borderColor:'#9e2828',borderWidth:1,yAxisID:'y',
+          datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,
+            anchor:'end',align:'end',color:'#9e2828',font:{size:10,weight:'600'},
+            formatter:v=>v>0?v+'건':''}},
         {label:'완료율(%)',data:rates,type:'line',
           borderColor:'#2e7fd4',backgroundColor:'transparent',
-          borderWidth:2,pointBackgroundColor:'#2e7fd4',pointRadius:3,
-          fill:false,tension:0.3,yAxisID:'y2'}
+          borderWidth:2,pointBackgroundColor:'#2e7fd4',pointRadius:4,
+          fill:false,tension:0.3,yAxisID:'y2',
+          datalabels:{
+            display:true,
+            align:'top',
+            anchor:'end',
+            offset:4,
+            color:'#2e7fd4',
+            font:{size:10,weight:'600'},
+            formatter:v => v+'%'
+          }}
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
+        datalabels:{display:false}, // 기본 비활성화, 각 dataset에서 개별 설정
         tooltip:{callbacks:{label:ctx=>
           ctx.datasetIndex===2 ? ctx.dataset.label+': '+ctx.raw+'%'
           : ctx.dataset.label+': '+ctx.raw+'건'}}},
       scales:{
         x:{grid:{color:gc},ticks:{color:tc,font:{size:10}}},
         y:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
+           max: Math.ceil(Math.max(...totals, 10) * 1.25 / 10) * 10,
            title:{display:true,text:'건수',color:tc,font:{size:9}}},
         y2:{position:'right',grid:{display:false},min:0,max:100,
             ticks:{color:'#2e7fd4',font:{size:10},callback:v=>v+'%'},
@@ -2384,5 +2403,54 @@ document.addEventListener('keydown', e => {
   // 3. 세션 없음 → 로그인 화면 유지 (기본값)
 })();
 </script>
+
+<!-- 고객의 목소리 등록/수정 모달 -->
+<div id="voc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#ffffff;border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:#1a1a18">💬 고객의 목소리 등록</div>
+      <button onclick="closeVocModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#96948d;line-height:1">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="field"><label>접수일</label><input type="date" id="vf-date"></div>
+      <div class="field"><label>업체명 / 성함</label><input id="vf-co" placeholder="예: 현대아이티 / 김철수"></div>
+      <div class="field"><label>카테고리</label>
+        <select id="vf-category">
+          <option value="">선택</option>
+          <option value="기존 기능 오류/불편">기존 기능 오류/불편</option>
+          <option value="UI/UX 편의성 개선">UI/UX 편의성 개선</option>
+          <option value="결제/정산 관련">결제/정산 관련</option>
+          <option value="신규 기능 요청">신규 기능 요청</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="field"><label>긴급도</label>
+        <select id="vf-urgency">
+          <option value="보통">보통</option>
+          <option value="급함">급함</option>
+          <option value="매우 급함">매우 급함</option>
+          <option value="낮음">낮음</option>
+        </select>
+      </div>
+      <div class="field"><label>제목</label><input id="vf-title" placeholder="요청/문의 제목"></div>
+      <div class="field"><label>내용</label>
+        <textarea id="vf-content" rows="4" placeholder="상세 내용을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0deda;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+      <div class="field"><label>개발 반영 여부</label>
+        <select id="vf-dev">
+          <option value="">검토 중</option>
+          <option value="개발">개발 반영</option>
+          <option value="보류">보류</option>
+          <option value="미반영">미반영</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="saveVoc()" style="flex:1;padding:11px;background:#17996e;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">저장</button>
+        <button onclick="closeVocModal()" style="flex:1;padding:11px;background:#f5f4f1;border:1px solid #e0deda;border-radius:8px;color:#5a5955;font-size:14px;cursor:pointer;font-family:inherit">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
