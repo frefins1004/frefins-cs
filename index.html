@@ -158,8 +158,8 @@ tr:hover td{background:var(--surface2);cursor:pointer}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;display:none;align-items:flex-end;justify-content:center}
 .overlay.show{display:flex}
 @media(min-width:700px){.overlay{align-items:center}}
-.modal{background:var(--surface);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:24px;position:relative}
-@media(min-width:700px){.modal{border-radius:var(--r);max-height:85vh}}
+.modal{background:var(--surface);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:780px;max-height:92vh;overflow-y:auto;padding:28px 32px;position:relative}
+@media(min-width:700px){.modal{border-radius:var(--r);max-height:88vh}}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
 .modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0;line-height:1}
 .modal-close:hover{color:var(--text1)}
@@ -650,6 +650,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           </div>
         </div>
         <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 내용 메모</div><div class="detail-value" id="dp-memo" style="color:var(--text2)">—</div></div>
+        <div id="dp-images" style="display:none;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
         <div class="trello-box" id="dp-trello" style="display:none">
           <div class="trello-label">📋 Trello 카드</div>
           <div class="trello-status" id="dp-trello-url">—</div>
@@ -926,6 +927,18 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     </div>
     <div class="field"><label>CS 내용 *</label><textarea id="f-content" placeholder="고객 문의 또는 요청 내용을 상세히 입력해주세요"></textarea></div>
     <div class="field"><label>처리 메모 (선택)</label><textarea id="f-memo" placeholder="처리 과정이나 현재 상황을 메모해주세요" style="min-height:60px"></textarea></div>
+    <div class="field">
+      <label>📎 이미지 첨부 (선택 · 최대 3장)</label>
+      <input type="file" id="f-images" multiple accept="image/*"
+        style="display:none" onchange="previewImages(this)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button type="button" onclick="document.getElementById('f-images').click()"
+          style="padding:8px 14px;border:1px dashed #b0ddd0;border-radius:8px;background:#f0faf7;color:#17996e;font-size:13px;cursor:pointer;font-family:inherit">
+          + 이미지 선택
+        </button>
+        <div id="f-image-preview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
     <div class="field">
       <label>🔗 Trello 링크 (선택)</label>
       <input id="f-trello" type="url" placeholder="https://trello.com/c/..." style="font-size:12px">
@@ -1920,6 +1933,21 @@ function selectCS(id) {
   document.getElementById('dp-sla').innerHTML = slaBadge(cs.sla);
   document.getElementById('dp-memo').textContent = cs.memo || '(없음)';
 
+  // 이미지 표시
+  const imgArea = document.getElementById('dp-images');
+  if (imgArea) {
+    if (cs.images && cs.images.length) {
+      imgArea.style.display = '';
+      imgArea.innerHTML = cs.images.map(img =>
+        `<img src="${img.data}" title="${img.name}"
+          style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e0deda;cursor:pointer"
+          onclick="window.open('${img.data}','_blank')">`
+      ).join('');
+    } else {
+      imgArea.style.display = 'none';
+    }
+  }
+
   // Trello 링크 표시
   const trelloBox = document.getElementById('dp-trello');
   const trelloUrlEl = document.getElementById('dp-trello-url');
@@ -1979,6 +2007,10 @@ function openRegisterModal() {
   document.getElementById('f-content').value = '';
   document.getElementById('f-memo').value = '';
   if(document.getElementById('f-trello')) document.getElementById('f-trello').value = '';
+  const fi = document.getElementById('f-images');
+  if(fi) { fi.value=''; }
+  const fp = document.getElementById('f-image-preview');
+  if(fp) fp.innerHTML = '';
   document.getElementById('f-status').value = '접수';
   if (currentUserData) document.getElementById('f-staff').value = currentUserData.name || '유소미';
   document.getElementById('modal-err').classList.remove('show');
@@ -2014,6 +2046,49 @@ function closeModal() {
   editingId = null;
 }
 
+// 이미지 미리보기
+function previewImages(input) {
+  const preview = document.getElementById('f-image-preview');
+  preview.innerHTML = '';
+  const files = Array.from(input.files).slice(0, 3);
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;display:inline-block';
+      wrap.innerHTML = `
+        <img src="${e.target.result}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e0deda">
+        <button type="button" onclick="removeImage(${i})"
+          style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#de4545;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>`;
+      preview.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeImage(idx) {
+  const input = document.getElementById('f-images');
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach((f, i) => { if (i !== idx) dt.items.add(f); });
+  input.files = dt.files;
+  previewImages(input);
+}
+
+// 이미지를 base64로 변환해서 CS 데이터에 저장
+async function getImagesBase64() {
+  const input = document.getElementById('f-images');
+  if (!input || !input.files.length) return [];
+  const results = [];
+  for (const file of Array.from(input.files).slice(0, 3)) {
+    await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => { results.push({ name: file.name, data: e.target.result }); resolve(); };
+      reader.readAsDataURL(file);
+    });
+  }
+  return results;
+}
+
 function checkTrelloPreview() {
   const t = document.getElementById('f-type').value;
   document.getElementById('trello-preview').style.display = (t === '오류' || t === '개선 요청') ? '' : 'none';
@@ -2034,6 +2109,7 @@ async function submitCS() {
   const status = document.getElementById('f-status').value;
   const staff = document.getElementById('f-staff').value;
   const trelloUrl = document.getElementById('f-trello')?.value.trim() || '';
+  const images = await getImagesBase64();
 
   if (!co || !content) {
     err.textContent = '업체명과 내용은 필수 입력사항입니다.';
@@ -2047,11 +2123,11 @@ async function submitCS() {
 
   if (editingId) {
     const cs = allCS.find(c => c.id === editingId);
-    if (cs) Object.assign(cs, {date,channel,type,biz,co,content,memo,status,staff,trelloUrl});
+    if (cs) Object.assign(cs, {date,channel,type,biz,co,content,memo,status,staff,trelloUrl,images});
     showToast('수정했습니다 ✓');
     // Firebase: await db.collection('cs').doc(editingId).update({...});
   } else {
-    const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,trelloUrl,sla:'',createdAt:new Date()};
+    const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
 
     // Trello 전달 (단순문의 제외 전체 유형)
@@ -2076,7 +2152,21 @@ async function submitCS() {
   computeSLA();
   renderAll();
   closeModal();
-  if (editingId) selectCS(editingId);
+  // 등록 후 CS 목록으로 자동 이동
+  const navCs = document.getElementById('nav-cs');
+  showPage('cs-list', navCs);
+  if (editingId) {
+    selectCS(editingId);
+  } else {
+    // 새로 등록한 건 하이라이트 (첫 번째 행)
+    setTimeout(() => {
+      const firstRow = document.querySelector('#cs-tbody tr');
+      if (firstRow) {
+        firstRow.style.background = '#e8f5f1';
+        setTimeout(() => { firstRow.style.background = ''; }, 2000);
+      }
+    }, 100);
+  }
   btn.innerHTML = '<span id="submit-label">등록</span>';
   btn.disabled = false;
 }
