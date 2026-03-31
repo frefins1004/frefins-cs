@@ -2322,11 +2322,11 @@ function loadConfigFields() {
     'cfg-authDomain':localStorage.getItem('fb_authDomain')|| '',
     'cfg-projectId': localStorage.getItem('fb_projectId') || '',
     'cfg-appId':     localStorage.getItem('fb_appId')     || '',
-    // Trello 설정
-    'cfg-trelloKey':    localStorage.getItem('trello_key')    || '',
-    'cfg-trelloToken':  localStorage.getItem('trello_token')  || '',
-    'cfg-trelloBoardId':localStorage.getItem('trello_boardId')|| '',
-    'cfg-trelloListId': localStorage.getItem('trello_listId') || '',
+    // Trello 설정 (localStorage 없으면 TRELLO_CONFIG 기본값 사용)
+    'cfg-trelloKey':    localStorage.getItem('trello_key')     || TRELLO_CONFIG.key    || '',
+    'cfg-trelloToken':  localStorage.getItem('trello_token')   || TRELLO_CONFIG.token  || '',
+    'cfg-trelloBoardId':localStorage.getItem('trello_boardId') || TRELLO_CONFIG.boardId|| '',
+    'cfg-trelloListId': localStorage.getItem('trello_listId')  || TRELLO_CONFIG.listId || '',
     // Trello 레이블 ID
     'cfg-label-error':   JSON.parse(localStorage.getItem('trello_labelIds')||'{}')['오류']       || '',
     'cfg-label-improve': JSON.parse(localStorage.getItem('trello_labelIds')||'{}')['개선 요청']   || '',
