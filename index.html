@@ -834,6 +834,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <button class="btn btn-sm" onclick="testTrelloConnection()">🔗 연결 테스트</button>
           <span id="trello-test-result" style="font-size:12px;color:var(--text3)"></span>
         </div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-sm" onclick="debugTrello()" style="background:#f5f4f1;color:#1a1a18;border:1px solid #e0deda">🔍 연동 상태 확인</button>
+          <button class="btn btn-sm btn-primary" onclick="forceTrelloTest()" style="font-size:12px">▶ 테스트 카드 생성</button>
+          <span id="trello-debug-result" style="font-size:12px;color:var(--text3)"></span>
+        </div>
         <div class="config-note" style="margin-top:12px">
           ⚠️ <b>Token은 보안상 코드에 포함되지 않습니다.</b> 아래 순서로 각 브라우저에서 직접 입력·저장해주세요.<br><br>
           1. <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> → frefins-cs 앱 → API Key 탭<br>
@@ -2408,6 +2413,66 @@ function saveTrelloConfig() {
 }
 
 // 연결 테스트
+// ── Trello 디버그 함수 ──────────────────────────────────────────────
+function debugTrello() {
+  const el = document.getElementById('trello-debug-result');
+  const cfg = TRELLO_CONFIG;
+  const info = [
+    'key: ' + (cfg.key ? cfg.key.slice(0,8)+'...' : '❌없음'),
+    'token: ' + (cfg.token ? cfg.token.slice(0,8)+'...' : '❌없음'),
+    'listId: ' + (cfg.listId || '❌없음'),
+  ].join(' | ');
+  el.textContent = info;
+  el.style.color = (cfg.key && cfg.token && cfg.listId) ? 'var(--teal)' : 'var(--red)';
+  // 콘솔에도 전체 출력
+  console.log('TRELLO_CONFIG:', {
+    key: cfg.key,
+    token: cfg.token ? cfg.token.slice(0,12)+'...' : '',
+    listId: cfg.listId,
+    boardId: cfg.boardId,
+  });
+}
+
+async function forceTrelloTest() {
+  const el = document.getElementById('trello-debug-result');
+  el.textContent = '테스트 중...';
+  const { key, token, listId } = TRELLO_CONFIG;
+  if (!key || !token || !listId) {
+    el.textContent = '❌ key/token/listId 중 빈값 있음 - 위 디버그 버튼으로 확인';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  try {
+    const res = await fetch(
+      `https://api.trello.com/1/cards?key=${key}&token=${token}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idList: listId,
+          name: '[CS운영시스템] 연동 테스트 카드 - 확인 후 삭제',
+          desc: '테스트 카드입니다. 확인 후 삭제해주세요.'
+        })
+      }
+    );
+    if (res.ok) {
+      const card = await res.json();
+      el.textContent = '✅ 성공! ' + card.url;
+      el.style.color = 'var(--teal)';
+      showToast('✅ Trello 연동 성공! 카드가 생성되었습니다.');
+    } else {
+      const txt = await res.text();
+      el.textContent = '❌ HTTP ' + res.status + ': ' + txt.slice(0,80);
+      el.style.color = 'var(--red)';
+      showToast('Trello 오류: HTTP ' + res.status);
+    }
+  } catch(e) {
+    el.textContent = '❌ 오류: ' + e.message;
+    el.style.color = 'var(--red)';
+    showToast('Trello 오류: ' + e.message);
+  }
+}
+
 async function testTrelloConnection() {
   const el = document.getElementById('trello-test-result');
   el.textContent = '테스트 중...';
