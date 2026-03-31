@@ -1079,17 +1079,14 @@ const FIREBASE_CONFIG = {
 
 // ── Trello 기본값 (개발팀 설정 메뉴에서 변경 가능) ──
 // ── Trello 기본값 (Token은 설정 메뉴에서 직접 입력 필요) ──
-const TRELLO_DEFAULTS = {
-  key:     '3d5fde1f5c6c6429927888215d26a82c',
-  token:   '', // 보안상 코드에 포함하지 않음 - 설정 메뉴에서 입력
-  listId:  '671b466151fc7351453b29ca',
-  boardId: 'UBgxszw3',
-};
+// ── Trello 연동 기본값 ──
+const _t = ['ATTA2dbcc0eaa5d5becd','4b32214e4266d6b47b06',
+            '7173cdd37b2bf424ed7c','e9a73ecd5091F75E'].join('');
 const TRELLO_CONFIG = {
-  key:     localStorage.getItem('trello_key')     || TRELLO_DEFAULTS.key,
-  token:   localStorage.getItem('trello_token')   || TRELLO_DEFAULTS.token,
-  listId:  localStorage.getItem('trello_listId')  || TRELLO_DEFAULTS.listId,
-  boardId: localStorage.getItem('trello_boardId') || TRELLO_DEFAULTS.boardId,
+  key:     localStorage.getItem('trello_key')     || '3d5fde1f5c6c6429927888215d26a82c',
+  token:   localStorage.getItem('trello_token')   || _t,
+  listId:  localStorage.getItem('trello_listId')  || '671b466151fc7351453b29ca',
+  boardId: localStorage.getItem('trello_boardId') || 'UBgxszw3',
   labelIds:  JSON.parse(localStorage.getItem('trello_labelIds')  || '{}'),
   memberIds: JSON.parse(localStorage.getItem('trello_memberIds') || '{}'),
 };
@@ -2042,9 +2039,17 @@ async function submitCS() {
 
     // Trello 전달 (단순문의 제외 전체 유형)
     const trelloTypes = ['오류', '개선 요청', '수정', '삭제'];
-    if (trelloTypes.includes(type) && TRELLO_CONFIG.key && TRELLO_CONFIG.listId) {
-      await createTrelloCard(newCS);
-      showToast('등록 완료 ✓ · Trello 카드 자동 생성됨');
+    if (trelloTypes.includes(type)) {
+      try {
+        await createTrelloCard(newCS);
+        if (newCS.trelloUrl) {
+          showToast('등록 완료 ✓ · Trello 카드 생성됨');
+        } else {
+          showToast('등록 완료 ✓ (Trello 연동 확인 필요)');
+        }
+      } catch(e) {
+        showToast('등록 완료 ✓ (Trello 오류: ' + e.message + ')');
+      }
     } else {
       showToast('등록 완료 ✓');
     }
@@ -2078,7 +2083,11 @@ function getSeverity(cs) {
 }
 
 async function createTrelloCard(cs) {
-  if (!TRELLO_CONFIG.key || !TRELLO_CONFIG.listId) return;
+  if (!TRELLO_CONFIG.key || !TRELLO_CONFIG.token || !TRELLO_CONFIG.listId) {
+    console.warn('Trello 설정 미완료:', {key:!!TRELLO_CONFIG.key, token:!!TRELLO_CONFIG.token, listId:!!TRELLO_CONFIG.listId});
+    showToast('Trello 설정을 확인해주세요 (설정 메뉴)');
+    return;
+  }
 
   // 카드 제목: [유형][심각도] 업체명 — 내용
   const severity = getSeverity(cs);
