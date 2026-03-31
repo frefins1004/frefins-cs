@@ -807,15 +807,38 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
       </div>
       <div class="config-section">
         <div class="config-ttl">📋 Trello 연동 설정</div>
-        <div class="field"><label>Trello API Key</label><input id="cfg-trelloKey" placeholder="Trello API Key"></div>
-        <div class="field"><label>Trello Token</label><input id="cfg-trelloToken" placeholder="Trello Token"></div>
-        <div class="field"><label>개발팀 Board ID</label><input id="cfg-trelloBoardId" placeholder="Board ID"></div>
-        <div class="field"><label>List ID (개발 요청 접수)</label><input id="cfg-trelloListId" placeholder="List ID"></div>
-        <button class="btn btn-primary" onclick="saveTrelloConfig()">Trello 설정 저장</button>
-        <div class="config-note">
-          Trello API Key: <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> 에서 발급<br>
-          Board/List ID: Trello 카드 URL에서 확인 가능<br>
-          개선 요청, 오류 건이 자동으로 Trello 카드로 생성됩니다
+        <div class="modal-row">
+          <div class="field"><label>API Key</label><input id="cfg-trelloKey" placeholder="Trello API Key"></div>
+          <div class="field"><label>Token</label><input id="cfg-trelloToken" placeholder="Trello Token"></div>
+        </div>
+        <div class="modal-row">
+          <div class="field"><label>Board ID</label><input id="cfg-trelloBoardId" placeholder="UBgxszw3"></div>
+          <div class="field"><label>List ID (요청 컬럼)</label><input id="cfg-trelloListId" placeholder="671b466151fc..."></div>
+        </div>
+        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">레이블 ID (선택 — Trello 보드에서 미리 생성 후 입력)</div>
+        <div class="modal-row">
+          <div class="field"><label>🔴 오류 레이블 ID</label><input id="cfg-label-error" placeholder="레이블 ID (선택)"></div>
+          <div class="field"><label>🔵 개선 요청 레이블 ID</label><input id="cfg-label-improve" placeholder="레이블 ID (선택)"></div>
+        </div>
+        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">담당자 Trello Member ID (선택)</div>
+        <div class="modal-row">
+          <div class="field"><label>유소미</label><input id="cfg-member-somi" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>안소진</label><input id="cfg-member-sojin" placeholder="Member ID (선택)"></div>
+        </div>
+        <div class="modal-row">
+          <div class="field"><label>김수아</label><input id="cfg-member-sua" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>김효민</label><input id="cfg-member-hyomin" placeholder="Member ID (선택)"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveTrelloConfig()" id="trello-save-btn">Trello 설정 저장</button>
+          <button class="btn btn-sm" onclick="testTrelloConnection()">🔗 연결 테스트</button>
+          <span id="trello-test-result" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <div class="config-note" style="margin-top:12px">
+          1. <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> → API Key 발급<br>
+          2. API Key 페이지 → Token 링크 클릭 → 허용<br>
+          3. 보드 URL: <code>trello.com/b/<b>보드ID</b>/보드명</code><br>
+          4. List ID: 위 링크로 확인 완료 → <b>671b466151fc7351453b29ca</b> (요청 컬럼)
         </div>
       </div>
       <div class="config-section">
@@ -2314,52 +2337,55 @@ function saveFirebaseConfig() {
   }
 }
 function saveTrelloConfig() {
-  const k  = document.getElementById('cfg-trelloKey').value.trim();
-  const t  = document.getElementById('cfg-trelloToken').value.trim();
-  const b  = document.getElementById('cfg-trelloBoardId').value.trim();
-  const l  = document.getElementById('cfg-trelloListId').value.trim();
-  const lError   = document.getElementById('cfg-label-error').value.trim();
-  const lImprove = document.getElementById('cfg-label-improve').value.trim();
-  const mSomi    = document.getElementById('cfg-member-somi').value.trim();
-  const mSojin   = document.getElementById('cfg-member-sojin').value.trim();
-  const mSua     = document.getElementById('cfg-member-sua').value.trim();
-  const mHyomin  = document.getElementById('cfg-member-hyomin').value.trim();
+  const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
 
-  // 값이 있을 때만 저장 (기존값 보호), 단 key/token/listId는 반드시 저장
-  localStorage.setItem('trello_key', k);
-  localStorage.setItem('trello_token', t);
-  if(b) localStorage.setItem('trello_boardId', b);
-  localStorage.setItem('trello_listId', l);
+  const k  = get('cfg-trelloKey');
+  const t  = get('cfg-trelloToken');
+  const b  = get('cfg-trelloBoardId');
+  const l  = get('cfg-trelloListId');
+  const lError   = get('cfg-label-error');
+  const lImprove = get('cfg-label-improve');
+  const mSomi    = get('cfg-member-somi');
+  const mSojin   = get('cfg-member-sojin');
+  const mSua     = get('cfg-member-sua');
+  const mHyomin  = get('cfg-member-hyomin');
+
+  if (!k || !t || !l) {
+    showToast('API Key, Token, List ID는 필수 입력사항입니다.');
+    return;
+  }
+
+  localStorage.setItem('trello_key',     k);
+  localStorage.setItem('trello_token',   t);
+  localStorage.setItem('trello_boardId', b);
+  localStorage.setItem('trello_listId',  l);
 
   const labelIds = {};
-  if(lError)   labelIds['오류'] = lError;
-  if(lImprove) labelIds['개선 요청'] = lImprove;
+  if (lError)   labelIds['오류']    = lError;
+  if (lImprove) labelIds['개선 요청'] = lImprove;
   localStorage.setItem('trello_labelIds', JSON.stringify(labelIds));
 
   const memberIds = {};
-  if(mSomi)   memberIds['유소미'] = mSomi;
-  if(mSojin)  memberIds['안소진'] = mSojin;
-  if(mSua)    memberIds['김수아'] = mSua;
-  if(mHyomin) memberIds['김효민'] = mHyomin;
+  if (mSomi)   memberIds['유소미'] = mSomi;
+  if (mSojin)  memberIds['안소진'] = mSojin;
+  if (mSua)    memberIds['김수아'] = mSua;
+  if (mHyomin) memberIds['김효민'] = mHyomin;
   localStorage.setItem('trello_memberIds', JSON.stringify(memberIds));
 
-  TRELLO_CONFIG.key = k; TRELLO_CONFIG.token = t;
-  TRELLO_CONFIG.boardId = b; TRELLO_CONFIG.listId = l;
-  TRELLO_CONFIG.labelIds = labelIds;
+  TRELLO_CONFIG.key       = k;
+  TRELLO_CONFIG.token     = t;
+  TRELLO_CONFIG.boardId   = b;
+  TRELLO_CONFIG.listId    = l;
+  TRELLO_CONFIG.labelIds  = labelIds;
   TRELLO_CONFIG.memberIds = memberIds;
 
   showToast('Trello 설정이 저장되었습니다 ✓');
-  // 저장 버튼 시각 피드백
-  const tbtn = document.querySelector('[onclick="saveTrelloConfig()"]');
-  if (tbtn) {
-    const origTxt = tbtn.textContent;
-    const origBg  = tbtn.style.background;
-    tbtn.style.background = '#0a6650';
-    tbtn.textContent = '✅ 저장됨';
-    setTimeout(() => { tbtn.textContent = origTxt; tbtn.style.background = origBg; }, 2500);
+  const btn = document.getElementById('trello-save-btn');
+  if (btn) {
+    btn.style.background = '#0a6650';
+    btn.textContent = '✅ 저장됨';
+    setTimeout(() => { btn.style.background = ''; btn.textContent = 'Trello 설정 저장'; }, 2500);
   }
-  // 저장 후 필드 다시 로드하여 확인
-  setTimeout(loadConfigFields, 100);
 }
 
 // 연결 테스트
