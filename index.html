@@ -790,7 +790,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
  
     <!-- CONFIG -->
     <div id="page-config" class="page">
-      <div class="page-header"><div class="page-title">Firebase 설정</div><div class="page-sub">아래 설정을 완료하면 실시간 데이터 저장이 활성화됩니다</div></div>
+      <div class="page-header"><div class="page-title">⚙️ 운영 설정</div><div class="page-sub">Firebase · Trello 연동 설정</div></div>
       <div class="config-section">
         <div class="config-ttl">🔥 Firebase 프로젝트 설정</div>
         <div class="field"><label>API Key</label><input id="cfg-apiKey" placeholder="AIza..."></div>
@@ -977,6 +977,10 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
     목소리
   </button>
+  <button class="m-tab" id="mtab-config" onclick="mobileNav('config',this)">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    설정
+  </button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1084,6 +1088,14 @@ const FIREBASE_CONFIG = {
 
 // ── Trello 기본값 (개발팀 설정 메뉴에서 변경 가능) ──
 // ── Trello 기본값 (Token은 설정 메뉴에서 직접 입력 필요) ──
+// ── Firebase 기본값 ──
+const FB_DEFAULTS = {
+  apiKey:    'AIzaSyBsRwPVnkPNdtT9vhwjOD3JIDG6AHNpz2M',
+  authDomain:'frefins-cs.firebaseapp.com',
+  projectId: 'frefins-cs',
+  appId:     '1:969318180096:web:f3a3107cd00562c026bfe5',
+};
+
 // ── Trello 연동 기본값 ──
 const _t = ['ATTA2dbcc0eaa5d5becd','4b32214e4266d6b47b06',
             '7173cdd37b2bf424ed7c','e9a73ecd5091F75E'].join('');
@@ -1219,7 +1231,7 @@ function initApp() {
   const canEdit = ['cs','admin'].includes(u.role);
   document.getElementById('nav-register').style.display = canEdit ? '' : 'none';
   document.getElementById('cs-list-register-btn').style.display = canEdit ? '' : 'none';
-  document.getElementById('nav-config').style.display = ['admin','dev'].includes(u.role) ? '' : 'none';
+  document.getElementById('nav-config').style.display = ['admin','dev','cs'].includes(u.role) ? '' : 'none';
 
   // Load data
   allCS = [...DEMO_CS];
@@ -2213,7 +2225,9 @@ function mobileNav(id, el) {
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
   // 사이드바 nav도 동기화
-  const navMap = {'overview':'nav-item','cs-list':'nav-cs','sla-breach':null,'clevel':'nav-clevel'};
+  const navMap = {'overview':'nav-item','cs-list':'nav-cs','sla-breach':null,'clevel':'nav-clevel','config':'nav-config','voc':'nav-voc'};
+  if (id === 'config') { setTimeout(loadConfigFields, 50); }
+  if (id === 'voc') { setTimeout(renderVOC, 50); }
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   renderMobileCards(id);
   window.scrollTo(0,0);
@@ -2318,10 +2332,10 @@ function syncMobileBadges() {
 function loadConfigFields() {
   // Firebase 설정
   const fields = {
-    'cfg-apiKey':    localStorage.getItem('fb_apiKey')    || '',
-    'cfg-authDomain':localStorage.getItem('fb_authDomain')|| '',
-    'cfg-projectId': localStorage.getItem('fb_projectId') || '',
-    'cfg-appId':     localStorage.getItem('fb_appId')     || '',
+    'cfg-apiKey':    localStorage.getItem('fb_apiKey')     || FB_DEFAULTS.apiKey    || '',
+    'cfg-authDomain':localStorage.getItem('fb_authDomain') || FB_DEFAULTS.authDomain|| '',
+    'cfg-projectId': localStorage.getItem('fb_projectId')  || FB_DEFAULTS.projectId || '',
+    'cfg-appId':     localStorage.getItem('fb_appId')      || FB_DEFAULTS.appId     || '',
     // Trello 설정 (localStorage 없으면 TRELLO_CONFIG 기본값 사용)
     'cfg-trelloKey':    localStorage.getItem('trello_key')     || TRELLO_CONFIG.key    || '',
     'cfg-trelloToken':  localStorage.getItem('trello_token')   || TRELLO_CONFIG.token  || '',
