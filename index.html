@@ -835,10 +835,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <span id="trello-test-result" style="font-size:12px;color:var(--text3)"></span>
         </div>
         <div class="config-note" style="margin-top:12px">
-          1. <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> → API Key 발급<br>
-          2. API Key 페이지 → Token 링크 클릭 → 허용<br>
-          3. 보드 URL: <code>trello.com/b/<b>보드ID</b>/보드명</code><br>
-          4. List ID: 위 링크로 확인 완료 → <b>671b466151fc7351453b29ca</b> (요청 컬럼)
+          ⚠️ <b>Token은 보안상 코드에 포함되지 않습니다.</b> 아래 순서로 각 브라우저에서 직접 입력·저장해주세요.<br><br>
+          1. <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> → frefins-cs 앱 → API Key 탭<br>
+          2. API Key: <b>3d5fde1f5c6c6429927888215d26a82c</b><br>
+          3. Token 링크 클릭 → 허용 → Token 복사 후 위 Token 란에 붙여넣기<br>
+          4. List ID: <b>671b466151fc7351453b29ca</b> (요청 컬럼) / Board ID: <b>UBgxszw3</b>
         </div>
       </div>
       <div class="config-section">
@@ -1076,14 +1077,20 @@ const FIREBASE_CONFIG = {
   appId: localStorage.getItem('fb_appId') || "YOUR_APP_ID"
 };
 
+// ── Trello 기본값 (개발팀 설정 메뉴에서 변경 가능) ──
+// ── Trello 기본값 (Token은 설정 메뉴에서 직접 입력 필요) ──
+const TRELLO_DEFAULTS = {
+  key:     '3d5fde1f5c6c6429927888215d26a82c',
+  token:   '', // 보안상 코드에 포함하지 않음 - 설정 메뉴에서 입력
+  listId:  '671b466151fc7351453b29ca',
+  boardId: 'UBgxszw3',
+};
 const TRELLO_CONFIG = {
-  key:    localStorage.getItem('trello_key')    || '',
-  token:  localStorage.getItem('trello_token')  || '',
-  listId: localStorage.getItem('trello_listId') || '',
-  boardId: localStorage.getItem('trello_boardId') || '',
-  // 유형별 레이블 ID (Trello 보드에서 미리 생성 후 ID 입력)
-  labelIds: JSON.parse(localStorage.getItem('trello_labelIds') || '{}'),
-  // 담당자별 Trello Member ID
+  key:     localStorage.getItem('trello_key')     || TRELLO_DEFAULTS.key,
+  token:   localStorage.getItem('trello_token')   || TRELLO_DEFAULTS.token,
+  listId:  localStorage.getItem('trello_listId')  || TRELLO_DEFAULTS.listId,
+  boardId: localStorage.getItem('trello_boardId') || TRELLO_DEFAULTS.boardId,
+  labelIds:  JSON.parse(localStorage.getItem('trello_labelIds')  || '{}'),
   memberIds: JSON.parse(localStorage.getItem('trello_memberIds') || '{}'),
 };
 
@@ -2128,7 +2135,10 @@ async function createTrelloCard(cs) {
     } else {
       console.warn('Trello 카드 생성 실패:', res.status, await res.text());
     }
-  } catch(e) { console.warn('Trello 연동 오류:', e); }
+  } catch(e) {
+    console.warn('Trello 연동 오류:', e);
+    showToast('Trello 연동 실패: ' + (e.message || '네트워크 오류'));
+  }
 }
 
 // ============ FILTERS ============
