@@ -2291,7 +2291,7 @@ function loadConfigFields() {
   };
   Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id);
-    if (el && !el.value) el.value = val; // 이미 입력된 값은 덮어쓰지 않음
+    if (el) el.value = val; // localStorage 저장값으로 항상 채우기
   });
 }
 
@@ -2325,10 +2325,11 @@ function saveTrelloConfig() {
   const mSua     = document.getElementById('cfg-member-sua').value.trim();
   const mHyomin  = document.getElementById('cfg-member-hyomin').value.trim();
 
-  if(k) localStorage.setItem('trello_key', k);
-  if(t) localStorage.setItem('trello_token', t);
+  // 값이 있을 때만 저장 (기존값 보호), 단 key/token/listId는 반드시 저장
+  localStorage.setItem('trello_key', k);
+  localStorage.setItem('trello_token', t);
   if(b) localStorage.setItem('trello_boardId', b);
-  if(l) localStorage.setItem('trello_listId', l);
+  localStorage.setItem('trello_listId', l);
 
   const labelIds = {};
   if(lError)   labelIds['오류'] = lError;
@@ -2348,8 +2349,17 @@ function saveTrelloConfig() {
   TRELLO_CONFIG.memberIds = memberIds;
 
   showToast('Trello 설정이 저장되었습니다 ✓');
+  // 저장 버튼 시각 피드백
   const tbtn = document.querySelector('[onclick="saveTrelloConfig()"]');
-  if (tbtn) { tbtn.style.background='#0a6650'; tbtn.textContent='✅ 저장됨'; }
+  if (tbtn) {
+    const origTxt = tbtn.textContent;
+    const origBg  = tbtn.style.background;
+    tbtn.style.background = '#0a6650';
+    tbtn.textContent = '✅ 저장됨';
+    setTimeout(() => { tbtn.textContent = origTxt; tbtn.style.background = origBg; }, 2500);
+  }
+  // 저장 후 필드 다시 로드하여 확인
+  setTimeout(loadConfigFields, 100);
 }
 
 // 연결 테스트
