@@ -1212,24 +1212,66 @@ function renderAll() {
   syncMobileBadges();
 }
 
+// ── 한국 공휴일 (2025~2027) ──────────────────────────────────────────
+const KR_HOLIDAYS = new Set([
+  // 2025년
+  '2025-01-01','2025-01-28','2025-01-29','2025-01-30',
+  '2025-03-01','2025-05-05','2025-05-06','2025-06-06',
+  '2025-08-15','2025-10-03','2025-10-05','2025-10-06','2025-10-07','2025-10-08','2025-10-09',
+  '2025-12-25',
+  // 2026년
+  '2026-01-01','2026-01-15','2026-01-16','2026-01-17',
+  '2026-03-01','2026-05-05','2026-05-25',
+  '2026-06-06','2026-08-15','2026-08-17',
+  '2026-09-24','2026-09-25','2026-09-26',
+  '2026-10-03','2026-10-09',
+  '2026-12-25',
+  // 2027년
+  '2027-01-01','2027-02-08','2027-02-09','2027-02-10',
+  '2027-03-01','2027-05-05',
+  '2027-06-06','2027-08-15','2027-08-16',
+  '2027-09-14','2027-09-15','2027-09-16',
+  '2027-10-03','2027-10-04','2027-10-09',
+  '2027-12-25',
+]);
+
+// 두 날짜 사이 영업일 수 계산 (주말 + 한국 공휴일 제외)
+function calcBusinessDays(startDate, endDate) {
+  let count = 0;
+  const cur = new Date(startDate);
+  cur.setHours(0,0,0,0);
+  const end = new Date(endDate);
+  end.setHours(0,0,0,0);
+  while (cur < end) {
+    const dow = cur.getDay(); // 0=일, 6=토
+    const ymd = cur.toISOString().slice(0,10);
+    if (dow !== 0 && dow !== 6 && !KR_HOLIDAYS.has(ymd)) {
+      count++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
 function computeSLA() {
-  // SLA 기준: 영업일 기준이나 단순화하여 달력일 기준으로 계산
-  // (단순 문의 1일 / 삭제·수정 3일 / 오류 7일 / 개선 요청 14일)
+  // SLA 기준: 영업일 기준 (주말·한국 공휴일 제외)
+  // 단순 문의 1일 / 삭제·수정 3일 / 오류 7일 / 개선 요청 14일
   const SLA_RULES = {'단순 문의':1,'삭제':3,'수정':3,'오류':7,'개선 요청':14};
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
   allCS.forEach(cs => {
-    // 완료 상태이면 SLA → OK (소미님이 완료로 변경하면 자동 처리)
+    // 완료 상태이면 SLA → OK
     if (cs.status === '완료') {
       cs.sla = 'OK';
       return;
     }
-    // 미완료 건: 오늘 기준으로 경과일 자동 계산
-    const d = new Date(cs.date);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const diff = Math.floor((today - d) / 86400000);
+    // 미완료 건: 접수일~오늘 영업일 수 계산
+    const startDate = new Date(cs.date);
+    const bizDays = calcBusinessDays(startDate, today);
     const limit = SLA_RULES[cs.type] || 7;
-    if (diff > limit) {
-      cs.sla = `${diff - limit}일 초과`;
+    if (bizDays > limit) {
+      cs.sla = `${bizDays - limit}일 초과`;
     } else {
       cs.sla = ''; // SLA 기준 내 처리 중
     }
