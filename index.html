@@ -897,6 +897,10 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     </div>
     <div class="field"><label>CS 내용 *</label><textarea id="f-content" placeholder="고객 문의 또는 요청 내용을 상세히 입력해주세요"></textarea></div>
     <div class="field"><label>처리 메모 (선택)</label><textarea id="f-memo" placeholder="처리 과정이나 현재 상황을 메모해주세요" style="min-height:60px"></textarea></div>
+    <div class="field">
+      <label>🔗 Trello 링크 (선택)</label>
+      <input id="f-trello" type="url" placeholder="https://trello.com/c/..." style="font-size:12px">
+    </div>
     <div class="field"><label>처리 상태</label>
       <select id="f-status">
         <option value="접수">접수</option>
@@ -1663,7 +1667,7 @@ function renderCSTable(resetPage) {
       <td>${typeBadge(c.type)}</td>
       <td>${c.biz}</td>
       <td class="td-main">${c.co}</td>
-      <td class="td-truncate">${c.content}</td>
+      <td class="td-truncate">${c.content}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello 카드">🔗</a>`:''}</td>
       <td>${statusBadge(c.status)}</td>
       <td>${slaBadge(c.sla)}</td>
       <td>${c.staff}</td>
@@ -1777,7 +1781,7 @@ function renderBreachTable() {
       <td>${typeBadge(c.type)}</td>
       <td>${c.biz}</td>
       <td class="td-main">${c.co}</td>
-      <td class="td-truncate">${c.content}</td>
+      <td class="td-truncate">${c.content}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello 카드">🔗</a>`:''}</td>
       <td><span class="sla-ng">▲ ${c.sla}</span></td>
       <td>${statusBadge(c.status)}</td>
       <td>${c.staff}</td>
@@ -1832,7 +1836,7 @@ function renderCLevelPage() {
       <td>${c.date}</td>
       <td>${typeBadge(c.type)}</td>
       <td class="td-main">${c.co}</td>
-      <td class="td-truncate">${c.content}</td>
+      <td class="td-truncate">${c.content}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello 카드">🔗</a>`:''}</td>
       <td><span class="sla-ng">▲ ${c.sla}</span></td>
       <td>${statusBadge(c.status)}</td>
       <td>${c.staff}</td>
@@ -1871,6 +1875,16 @@ function selectCS(id) {
   document.getElementById('dp-status').innerHTML = statusBadge(cs.status);
   document.getElementById('dp-sla').innerHTML = slaBadge(cs.sla);
   document.getElementById('dp-memo').textContent = cs.memo || '(없음)';
+
+  // Trello 링크 표시
+  const trelloBox = document.getElementById('dp-trello');
+  const trelloUrlEl = document.getElementById('dp-trello-url');
+  if (cs.trelloUrl) {
+    trelloBox.style.display = '';
+    trelloUrlEl.innerHTML = `<a href="${cs.trelloUrl}" target="_blank" style="color:var(--blue);word-break:break-all;font-size:12px">🔗 Trello 카드 보기</a>`;
+  } else {
+    trelloBox.style.display = 'none';
+  }
 
   // Role-based edit/delete
   const canEdit = currentUserData && ['cs','admin'].includes(currentUserData.role);
@@ -1920,6 +1934,7 @@ function openRegisterModal() {
   document.getElementById('f-co').value = '';
   document.getElementById('f-content').value = '';
   document.getElementById('f-memo').value = '';
+  if(document.getElementById('f-trello')) document.getElementById('f-trello').value = '';
   document.getElementById('f-status').value = '접수';
   if (currentUserData) document.getElementById('f-staff').value = currentUserData.name || '유소미';
   document.getElementById('modal-err').classList.remove('show');
@@ -1942,6 +1957,7 @@ function openEditModal() {
   document.getElementById('f-co').value = cs.co;
   document.getElementById('f-content').value = cs.content;
   document.getElementById('f-memo').value = cs.memo || '';
+  if(document.getElementById('f-trello')) document.getElementById('f-trello').value = cs.trelloUrl || '';
   document.getElementById('f-status').value = cs.status;
   document.getElementById('f-staff').value = cs.staff;
   document.getElementById('cs-modal').classList.add('show');
@@ -1973,6 +1989,7 @@ async function submitCS() {
   const memo = document.getElementById('f-memo').value.trim();
   const status = document.getElementById('f-status').value;
   const staff = document.getElementById('f-staff').value;
+  const trelloUrl = document.getElementById('f-trello')?.value.trim() || '';
 
   if (!co || !content) {
     err.textContent = '업체명과 내용은 필수 입력사항입니다.';
@@ -1986,11 +2003,11 @@ async function submitCS() {
 
   if (editingId) {
     const cs = allCS.find(c => c.id === editingId);
-    if (cs) Object.assign(cs, {date,channel,type,biz,co,content,memo,status,staff});
+    if (cs) Object.assign(cs, {date,channel,type,biz,co,content,memo,status,staff,trelloUrl});
     showToast('수정했습니다 ✓');
     // Firebase: await db.collection('cs').doc(editingId).update({...});
   } else {
-    const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,sla:'',createdAt:new Date()};
+    const newCS = {id:'cs'+Date.now(),date,channel,type,biz,co,content,memo,status,staff,trelloUrl,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
 
     // Trello 전달 (단순문의 제외 전체 유형)
@@ -2140,7 +2157,7 @@ function showPage(id, el) {
   if (id === 'sla') renderSLABreaches();
   if (id === 'sla-breach') renderSLABreaches();
   if (id === 'voc') renderVOC();
-  if (id === 'dev') renderDevRequests && renderDevRequests();
+  if (id === 'config') loadConfigFields();
 }
 
 function mobileNav(id, el) {
@@ -2250,6 +2267,34 @@ function syncMobileBadges() {
 }
 
 // ============ CONFIG ============
+// config 페이지 진입 시 저장된 값 불러오기
+function loadConfigFields() {
+  // Firebase 설정
+  const fields = {
+    'cfg-apiKey':    localStorage.getItem('fb_apiKey')    || '',
+    'cfg-authDomain':localStorage.getItem('fb_authDomain')|| '',
+    'cfg-projectId': localStorage.getItem('fb_projectId') || '',
+    'cfg-appId':     localStorage.getItem('fb_appId')     || '',
+    // Trello 설정
+    'cfg-trelloKey':    localStorage.getItem('trello_key')    || '',
+    'cfg-trelloToken':  localStorage.getItem('trello_token')  || '',
+    'cfg-trelloBoardId':localStorage.getItem('trello_boardId')|| '',
+    'cfg-trelloListId': localStorage.getItem('trello_listId') || '',
+    // Trello 레이블 ID
+    'cfg-label-error':   JSON.parse(localStorage.getItem('trello_labelIds')||'{}')['오류']       || '',
+    'cfg-label-improve': JSON.parse(localStorage.getItem('trello_labelIds')||'{}')['개선 요청']   || '',
+    // Trello 담당자 Member ID
+    'cfg-member-somi':   JSON.parse(localStorage.getItem('trello_memberIds')||'{}')['유소미']     || '',
+    'cfg-member-sojin':  JSON.parse(localStorage.getItem('trello_memberIds')||'{}')['안소진']     || '',
+    'cfg-member-sua':    JSON.parse(localStorage.getItem('trello_memberIds')||'{}')['김수아']     || '',
+    'cfg-member-hyomin': JSON.parse(localStorage.getItem('trello_memberIds')||'{}')['김효민']     || '',
+  };
+  Object.entries(fields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = val; // 이미 입력된 값은 덮어쓰지 않음
+  });
+}
+
 function saveFirebaseConfig() {
   const cfg = {
     apiKey: document.getElementById('cfg-apiKey').value,
@@ -2257,8 +2302,16 @@ function saveFirebaseConfig() {
     projectId: document.getElementById('cfg-projectId').value,
     appId: document.getElementById('cfg-appId').value,
   };
-  Object.entries(cfg).forEach(([k,v]) => { if(v) localStorage.setItem('fb_'+k, v); });
-  showToast('Firebase 설정이 저장되었습니다. 페이지를 새로고침해주세요.');
+  let saved = 0;
+  Object.entries(cfg).forEach(([k,v]) => { if(v) { localStorage.setItem('fb_'+k, v); saved++; } });
+  if (saved > 0) {
+    showToast('Firebase 설정이 저장되었습니다 ✓ 페이지를 새로고침해주세요.');
+    // 저장 버튼 색상 변경으로 시각적 확인
+    const btn = document.querySelector('[onclick="saveFirebaseConfig()"]');
+    if (btn) { btn.style.background='#0a6650'; btn.textContent='✅ 저장됨'; }
+  } else {
+    showToast('입력값을 확인해주세요.');
+  }
 }
 function saveTrelloConfig() {
   const k  = document.getElementById('cfg-trelloKey').value.trim();
@@ -2295,6 +2348,8 @@ function saveTrelloConfig() {
   TRELLO_CONFIG.memberIds = memberIds;
 
   showToast('Trello 설정이 저장되었습니다 ✓');
+  const tbtn = document.querySelector('[onclick="saveTrelloConfig()"]');
+  if (tbtn) { tbtn.style.background='#0a6650'; tbtn.textContent='✅ 저장됨'; }
 }
 
 // 연결 테스트
