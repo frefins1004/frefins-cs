@@ -245,6 +245,10 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 
   /* 페이지네이션 */
   #cs-pagination{flex-wrap:wrap;gap:4px;padding:10px 0}
+.pg-btn{min-width:32px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit}
+.pg-btn:hover{background:var(--surface2)}
+.pg-btn.active{background:var(--teal-m);color:#fff;border-color:var(--teal-m);font-weight:700}
+.pg-btn[disabled]{opacity:0.3;pointer-events:none}
 
   /* 모달 */
   .modal{padding:18px 16px}
@@ -702,6 +706,8 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <tbody id="cs-tbody"></tbody>
         </table>
       </div>
+      <!-- 페이지네이션 -->
+      <div class="pagination" id="cs-pagination" style="display:flex;align-items:center;justify-content:center;gap:4px;padding:14px 0;flex-wrap:wrap"></div>
     </div>
 
 
@@ -1607,16 +1613,24 @@ function renderCSTable(resetPage){
     </tr>`).join('');
 
   // 페이지네이션
-  const pg=document.querySelector('.pagination');
+  const pg=document.getElementById('cs-pagination');
   if(pg){
+    if(totalPages<=1){pg.innerHTML='';return;}
     let html='';
-    if(csPage>1) html+=`<button class="pg-btn" onclick="goPage(${csPage-1})">‹</button>`;
+    // 처음으로
+    html+=`<button class="pg-btn" onclick="goPage(1)" ${csPage===1?'disabled':''} title="처음">«</button>`;
+    // 이전
+    html+=`<button class="pg-btn" onclick="goPage(${csPage-1})" ${csPage===1?'disabled':''} title="이전">‹</button>`;
+    // 페이지 번호
     const start2=Math.max(1,csPage-2), end2=Math.min(totalPages,csPage+2);
-    if(start2>1) html+=`<button class="pg-btn" onclick="goPage(1)">1</button>${start2>2?'<span>…</span>':''}`;
+    if(start2>1) html+=`<button class="pg-btn" onclick="goPage(1)">1</button>${start2>2?'<span style="color:var(--text3);padding:0 4px">…</span>':''}`;
     for(let i=start2;i<=end2;i++) html+=`<button class="pg-btn${i===csPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
-    if(end2<totalPages) html+=`${end2<totalPages-1?'<span>…</span>':''}<button class="pg-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
-    if(csPage<totalPages) html+=`<button class="pg-btn" onclick="goPage(${csPage+1})">›</button>`;
-    html+=`<span style="font-size:11px;color:var(--text3);margin-left:8px">총 ${total}건 중 ${start+1}-${Math.min(start+CS_PAGE_SIZE,total)}</span>`;
+    if(end2<totalPages) html+=`${end2<totalPages-1?'<span style="color:var(--text3);padding:0 4px">…</span>':''}<button class="pg-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+    // 다음
+    html+=`<button class="pg-btn" onclick="goPage(${csPage+1})" ${csPage===totalPages?'disabled':''} title="다음">›</button>`;
+    // 마지막으로
+    html+=`<button class="pg-btn" onclick="goPage(${totalPages})" ${csPage===totalPages?'disabled':''} title="마지막">»</button>`;
+    html+=`<span style="font-size:11px;color:var(--text3);margin-left:6px">${start+1}–${Math.min(start+CS_PAGE_SIZE,total)} / 총 ${total}건</span>`;
     pg.innerHTML=html;
   }
 }
