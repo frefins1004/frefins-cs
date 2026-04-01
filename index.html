@@ -774,8 +774,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
                  line-height:1.6;color:var(--text1);background:#fff;
                  outline:none;white-space:pre-wrap;word-break:break-word"
           data-placeholder="고객 문의 또는 요청 내용을 입력하세요. 스크린샷은 Ctrl+V로 바로 붙여넣기 가능합니다."
+          data-empty="true"
+          onfocus="this.removeAttribute('data-empty')"
+          onblur="if(!this.innerText.trim())this.setAttribute('data-empty','true')"
           onpaste="handleEditorPaste(event)"
-          oninput="syncContentField(this)">
+          oninput="this.removeAttribute('data-empty');syncContentField(this)">
         </div>
         <!-- 히든 textarea (기존 로직 호환) -->
         <textarea id="f-content" style="display:none"></textarea>
