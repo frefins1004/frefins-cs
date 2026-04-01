@@ -124,7 +124,7 @@ body{background:#f5f4f1 !important;color:#181816 !important;font-family:-apple-s
 .m-card.amber .m-val{color:var(--amber)}
 
 /* Charts */
-.charts-row{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:20px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
 .chart-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:16px 18px}
 .chart-ttl{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:12px}
 
@@ -538,22 +538,22 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
             <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:2px;background:#de4545;opacity:0.4;display:inline-block"></span>SLA 초과</span>
             <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)"><span style="width:24px;height:2px;background:#2e7fd4;display:inline-block;border-radius:1px"></span>완료율</span>
           </div>
-          <div style="position:relative;height:190px"><canvas id="chart-monthly"></canvas></div>
+          <div style="position:relative;height:200px"><canvas id="chart-monthly"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-ttl">유형별 접수 현황 (26년 누적)</div>
-          <div style="position:relative;height:210px"><canvas id="chart-type"></canvas></div>
+          <div style="position:relative;height:200px"><canvas id="chart-type"></canvas></div>
         </div>
       </div>
       <!-- 기업구분 차트 -->
       <div class="charts-row" style="grid-template-columns:1fr 1fr;margin-bottom:0">
         <div class="chart-card">
           <div class="chart-ttl">기업구분별 접수 현황</div>
-          <div style="position:relative;height:180px"><canvas id="chart-biz"></canvas></div>
+          <div style="position:relative;height:200px"><canvas id="chart-biz"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-ttl">유형별 현황 (이번 달 · 26년 3월)</div>
-          <div style="position:relative;height:180px"><canvas id="chart-month-type"></canvas></div>
+          <div style="position:relative;height:200px"><canvas id="chart-month-type"></canvas></div>
         </div>
       </div>
     </div>
@@ -1504,12 +1504,16 @@ function renderCharts(){
   const mtSorted=Object.entries(monthTypeRaw).sort((a,b)=>b[1]-a[1]);
   const mtc=document.getElementById('chart-month-type');
   if(window._mtChart) window._mtChart.destroy();
-  if(mtc&&mtSorted.length) window._mtChart=new Chart(mtc,{
+  // 데이터 없어도 빈 축으로 표시
+  // 데이터 없으면 빈 배열로 표시 (축은 유지)
+  const mtLabels = mtSorted.length ? mtSorted.map(([k])=>k) : ['단순 문의','오류','수정','삭제','개선 요청'];
+  const mtVals   = mtSorted.length ? mtSorted.map(([,v])=>v) : [0,0,0,0,0];
+  if(mtc) window._mtChart=new Chart(mtc,{
     type:'bar',
-    data:{labels:mtSorted.map(([k])=>k),datasets:[{
-      data:mtSorted.map(([,v])=>v),
-      backgroundColor:mtSorted.map(([k])=>(typeColorsMap[k]||'#888')+'55'),
-      borderColor:mtSorted.map(([k])=>typeColorsMap[k]||'#888'),
+    data:{labels:mtLabels,datasets:[{
+      data:mtVals,
+      backgroundColor:mtLabels.map(k=>(typeColorsMap[k]||'#888')+'55'),
+      borderColor:mtLabels.map(k=>typeColorsMap[k]||'#888'),
       borderWidth:1.5,borderRadius:4,borderSkipped:false
     }]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
@@ -1523,10 +1527,16 @@ function renderCharts(){
   });
 
   // 차트 타이틀 업데이트
+  // 차트 타이틀 현재 월로 업데이트
   document.querySelectorAll('.chart-ttl').forEach(el=>{
     if(el.textContent.includes('유형별 접수 현황')) el.textContent='유형별 접수 현황 (26년 누적)';
-    if(el.textContent.includes('이번 달 유형별')) el.textContent=`유형별 현황 (이번 달 · ${mLabel})`;
+    if(el.textContent.includes('유형별 현황')) el.textContent=`유형별 현황 (이번 달 · ${mLabel})`;
   });
+  // 데이터 없을 때 안내
+  const mtTtl = Array.from(document.querySelectorAll('.chart-ttl')).find(el=>el.textContent.includes('이번 달'));
+  if(mtTtl && mtSorted.length===0){
+    mtTtl.innerHTML = `유형별 현황 (이번 달 · ${mLabel}) <span style="font-size:10px;color:var(--text3);font-weight:400">— 이번 달 접수 없음</span>`;
+  }
 }
 
 // ============ CS TABLE ============
