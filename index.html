@@ -385,7 +385,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     </div>
     <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn" style="margin-top:12px">로그인</button>
     <div id="demo-accounts" style="margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:600">테스트 계정 (Firebase 설정 전)</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-weight:600">빠른 로그인</div>
       <div style="display:flex;flex-direction:column;gap:5px">
         <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('sm.you@frefins.com','cs123!')">👩 소미님 (서비스기획팀)</button>
         <button class="btn btn-sm" style="justify-content:flex-start;font-size:11px" onclick="fillDemo('op@frefins.com','op123!')">👩 서비스기획팀 (추가 계정)</button>
@@ -1199,6 +1199,7 @@ function getSeverity(cs){
 function fillDemo(email,pw){
   document.getElementById('login-email').value=email;
   document.getElementById('login-pw').value=pw;
+  doLogin(); // 자동 로그인
 }
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
