@@ -765,7 +765,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 
       <!-- CS 내용 - 이미지 붙여넣기 가능한 넓은 에디터 -->
       <div class="field" style="margin-bottom:12px">
-        <label>CS 내용 * <span style="font-size:11px;color:var(--text3);font-weight:400">— 스크린샷을 Ctrl+V로 바로 붙여넣기 가능</span></label>
+        <label>CS 내용 * <span style="font-size:11px;color:var(--text3);font-weight:400">— Ctrl+V로 스크린샷 붙여넣기 · 이미지 클릭 시 삭제</span></label>
         <div id="f-content-editor"
           contenteditable="true"
           style="min-height:200px;max-height:400px;overflow-y:auto;
@@ -1728,8 +1728,19 @@ function handleEditorPaste(e){
       reader.onload=ev=>{
         const img=document.createElement('img');
         img.src=ev.target.result;
-        img.style.cssText='max-width:100%;border-radius:6px;margin:4px 0;display:block;cursor:pointer';
-        img.onclick=()=>window.open(img.src,'_blank');
+        img.style.cssText='max-width:480px;width:auto;border-radius:6px;margin:4px 0;display:block;cursor:pointer;border:2px solid transparent';
+        img.title='클릭: 삭제 | 드래그: 크기 조절';
+        // 클릭 시 삭제 확인
+        img.onclick=(e)=>{
+          e.preventDefault();
+          if(confirm('이미지를 삭제하시겠습니까?')){
+            img.remove();
+            syncContentField(document.getElementById('f-content-editor'));
+          }
+        };
+        // 호버 효과
+        img.onmouseenter=()=>{img.style.border='2px solid #de4545';img.style.opacity='0.85';};
+        img.onmouseleave=()=>{img.style.border='2px solid transparent';img.style.opacity='1';};
         const sel=window.getSelection();
         if(sel.rangeCount){
           const range=sel.getRangeAt(0);
@@ -1861,8 +1872,44 @@ async function createTrelloCard(cs){
   try{
     const res=await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`,
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(res.ok){const card=await res.json();cs.trelloUrl=card.url;cs.trelloCardId=card.id;}
-    else console.warn('Trello 실패:',res.status,await res.text());
+    if(res.ok){
+      const card=await res.json();
+      cs.trelloUrl=card.url;
+      cs.trelloCardId=card.id;
+
+      // 이미지 첨부 (붙여넣은 이미지 + f-images 파일)
+      const attachImages = [];
+
+      // 1) contenteditable 에디터 내 붙여넣은 이미지
+      const ed = document.getElementById('f-content-editor');
+      if(ed){
+        ed.querySelectorAll('img').forEach((img,i)=>{
+          attachImages.push({name:'screenshot_'+(i+1)+'.png', data:img.src});
+        });
+      }
+
+      // 2) 파일 첨부 이미지
+      if(cs.images && cs.images.length){
+        cs.images.forEach(img=>attachImages.push({name:img.name, data:img.data}));
+      }
+
+      // Trello 첨부파일 업로드 (base64 → Blob → FormData)
+      for(const att of attachImages){
+        try{
+          const fetchRes = await fetch(att.data);
+          const blob = await fetchRes.blob();
+          const fd = new FormData();
+          fd.append('file', blob, att.name);
+          fd.append('name', att.name);
+          await fetch(
+            `https://api.trello.com/1/cards/${card.id}/attachments?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`,
+            {method:'POST', body:fd}
+          );
+        }catch(e){console.warn('이미지 첨부 실패:',e);}
+      }
+      if(attachImages.length) showToast('✅ Trello 카드 + 이미지 '+attachImages.length+'장 첨부 완료');
+
+    }else console.warn('Trello 실패:',res.status,await res.text());
   }catch(e){console.warn('Trello 오류:',e);showToast('Trello 연동 실패: '+e.message);}
 }
 function debugTrello(){
