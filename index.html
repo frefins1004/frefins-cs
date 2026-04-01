@@ -1267,6 +1267,9 @@ function logout(){
   document.getElementById('login-email').value='';
   document.getElementById('login-pw').value='';
 }
+function doLogout(){
+  if(confirm('로그아웃 하시겠습니까?')) logout();
+}
 
 // ============ INIT ============
 function initApp(){
