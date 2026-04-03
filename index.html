@@ -764,9 +764,15 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
             <option value="유소미">유소미</option>
             <option value="안소진">안소진</option>
             <option value="김수아">김수아</option>
-            <option value="김효민">김효민</option>
+            <option value="한진선">한진선</option>
           </select>
         </div>
+      </div>
+
+      <!-- 제목 -->
+      <div class="field" style="margin-bottom:12px">
+        <label>제목 * <span style="font-size:11px;color:var(--text3);font-weight:400">— Trello 카드 제목으로 연동됩니다 (예: [퍼시픽모빌리티] CMS 결제 실패 확인요청)</span></label>
+        <input id="f-title" type="text" placeholder="[업체명] 요청 내용 요약" style="font-size:13px">
       </div>
 
       <!-- CS 내용 - 이미지 붙여넣기 가능한 넓은 에디터 -->
@@ -957,7 +963,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
         <div class="modal-row">
           <div class="field"><label>김수아</label><input id="cfg-member-sua" placeholder="Member ID (선택)"></div>
-          <div class="field"><label>김효민</label><input id="cfg-member-hyomin" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>한진선</label><input id="cfg-member-hyomin" placeholder="Member ID (선택)"></div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="saveTrelloConfig()" id="trello-save-btn">Trello 설정 저장</button>
@@ -1432,7 +1438,7 @@ function renderCharts(){
     type:'bar',
     data:{labels,datasets:[
       {label:'접수',data:totals,backgroundColor:'rgba(23,153,110,0.22)',borderColor:'#0a6650',borderWidth:1,yAxisID:'y',
-        datalabels:{anchor:'end',align:'end',color:'#0a6650',font:{size:10,weight:'600'},formatter:v=>v>0?v+'건':''}},
+        datalabels:{display:true,anchor:'end',align:'end',offset:2,color:'#0a6650',font:{size:10,weight:'600'},formatter:v=>v>0?v+'건':''}},
       {label:'SLA 초과',data:breaches,backgroundColor:'rgba(222,69,69,0.25)',borderColor:'#9e2828',borderWidth:1,yAxisID:'y',
         datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,anchor:'end',align:'end',color:'#9e2828',font:{size:10,weight:'600'},formatter:v=>v>0?v+'건':''}},
       {label:'완료율(%)',data:rates,type:'line',borderColor:'#2e7fd4',backgroundColor:'transparent',borderWidth:2,
@@ -1527,7 +1533,9 @@ function renderCharts(){
         datalabels:{anchor:'end',align:'end',color:'#5a5955',font:{size:11,weight:'600'},
           formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return v+'건('+(t>0?Math.round(v/t*100):0)+'%)';}
         }},
-      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true},y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}},
+      scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:10}},beginAtZero:true,
+          max:Math.max(25, Math.ceil(Math.max(...mtVals,1)*1.4))},
+        y:{grid:{display:false},ticks:{color:tc,font:{size:11}}}},
       layout:{padding:{right:80}}
     }
   });
@@ -1643,7 +1651,9 @@ function selectCS(id){
   if(!cs) return;
   const panel=document.getElementById('detail-panel');
   panel.classList.add('show');
-  document.getElementById('dp-title').textContent=cs.co+' — '+cs.content.slice(0,40)+(cs.content.length>40?'…':'');
+  document.getElementById('dp-title').textContent=cs.title
+    ? cs.co+' — '+cs.title
+    : cs.co+' — '+cs.content.slice(0,40)+(cs.content.length>40?'…':'');
   document.getElementById('dp-date').textContent=cs.date;
   document.getElementById('dp-channel').textContent=cs.channel;
   document.getElementById('dp-staff').textContent=cs.staff;
@@ -1706,6 +1716,7 @@ function editCS(id){
   document.getElementById('f-memo').value=cs.memo||'';
   document.getElementById('f-status').value=cs.status;
   document.getElementById('f-trello').value=cs.trelloUrl||'';
+  if(document.getElementById('f-title')) document.getElementById('f-title').value=cs.title||'';
   document.getElementById('f-content').value=cs.content||'';
   const ed=document.getElementById('f-content-editor');
   if(ed){
@@ -1737,6 +1748,7 @@ function openRegisterModal(){
   document.getElementById('f-memo').value='';
   document.getElementById('f-status').value='접수';
   document.getElementById('f-trello').value='';
+  if(document.getElementById('f-title')) document.getElementById('f-title').value='';
   document.getElementById('f-content').value='';
   const ed=document.getElementById('f-content-editor');
   if(ed){ed.innerHTML='';ed.setAttribute('data-empty','true');}
@@ -1824,6 +1836,7 @@ async function submitCS(){
   const status=document.getElementById('f-status').value;
   const staff=document.getElementById('f-staff').value;
   const trelloUrl=document.getElementById('f-trello')?.value.trim()||'';
+  const title=document.getElementById('f-title')?.value.trim()||'';
   const ed=document.getElementById('f-content-editor');
   const contentEl=document.getElementById('f-content');
   if(ed) contentEl.value=ed.innerText||'';
@@ -1840,10 +1853,10 @@ async function submitCS(){
 
   if(editingId){
     const cs=allCS.find(c=>c.id===editingId);
-    if(cs) Object.assign(cs,{date,channel,type,biz,co,content,contentHtml,memo,status,staff,trelloUrl,images});
+    if(cs) Object.assign(cs,{date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images});
     showToast('수정했습니다 ✓');
   }else{
-    const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,content,contentHtml,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
+    const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
     const trelloTypes=['오류','개선 요청','수정','삭제'];
     if(trelloTypes.includes(type)){
@@ -1875,7 +1888,10 @@ async function createTrelloCard(cs){
     showToast('Trello 설정을 확인해주세요 (설정 메뉴)'); return;
   }
   const severity=getSeverity(cs);
-  const name=`[${cs.type}] [${severity}] ${cs.co} — ${cs.content.slice(0,50)}`;
+  // 제목 우선, 없으면 자동 생성
+  const name = cs.title
+    ? `[ ${cs.co} ] ${cs.title}`
+    : `[${cs.type}] [${severity}] ${cs.co} — ${cs.content.slice(0,50)}`;
   const d=[];
   d.push('## 접수 정보');
   d.push('접수일: '+cs.date+' | 채널: '+cs.channel+' | 기업구분: '+cs.biz);
@@ -2178,7 +2194,7 @@ function loadConfigFields(){
     'cfg-member-somi':   JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['유소미']   ||'',
     'cfg-member-sojin':  JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['안소진']   ||'',
     'cfg-member-sua':    JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['김수아']   ||'',
-    'cfg-member-hyomin': JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['김효민']   ||'',
+    'cfg-member-hyomin': JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['한진선']   ||'',
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el) el.value=val;});
 }
@@ -2212,7 +2228,7 @@ function saveTrelloConfig(){
   if(mSomi)   memberIds['유소미']=mSomi;
   if(mSojin)  memberIds['안소진']=mSojin;
   if(mSua)    memberIds['김수아']=mSua;
-  if(mHyomin) memberIds['김효민']=mHyomin;
+  if(mHyomin) memberIds['한진선']=mHyomin;
   localStorage.setItem('trello_memberIds',JSON.stringify(memberIds));
   TRELLO_CONFIG.key=k;TRELLO_CONFIG.token=t;TRELLO_CONFIG.boardId=b;TRELLO_CONFIG.listId=l;
   TRELLO_CONFIG.labelIds=labelIds;TRELLO_CONFIG.memberIds=memberIds;
