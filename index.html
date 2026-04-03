@@ -1401,7 +1401,8 @@ function renderStats(){
   set('stat-month-total',monthAll.length+'건');
   set('stat-year-total',allCS.length+'건');
   set('stat-month-pending',monthPend.length+'건');
-  set('stat-year-pending',monthPend.length+'건');
+  const yearPend=yearAll.filter(c=>c.status!=='완료');
+  set('stat-year-pending',yearPend.length+'건');
   set('stat-month-rate',monthRate+'%');
   set('stat-year-rate',yearRate+'%');
   set('stat-breach-month',monthBreaches.length+'건');
@@ -1716,6 +1717,7 @@ async function updateStatus(val){
   computeSLA(); renderAll();
   showToast('상태가 '+val+'(으)로 변경되었습니다.');
 }
+function openEditModal(){ editCS(selectedCSId); }
 function editCS(id){
   const cs=allCS.find(c=>c.id===(id||selectedCSId));
   if(!cs) return;
