@@ -772,7 +772,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
       <!-- 제목 -->
       <div class="field" style="margin-bottom:12px">
         <label>제목 * <span style="font-size:11px;color:var(--text3);font-weight:400">— Trello 카드 제목으로 연동됩니다 (예: [퍼시픽모빌리티] CMS 결제 실패 확인요청)</span></label>
-        <input id="f-title" type="text" placeholder="[업체명] 요청 내용 요약" style="font-size:13px">
+        <input id="f-title" type="text" placeholder="요청 내용 요약" style="font-size:13px">
       </div>
 
       <!-- CS 내용 - 이미지 붙여넣기 가능한 넓은 에디터 -->
@@ -785,7 +785,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
                  padding:12px;font-size:13px;font-family:inherit;
                  line-height:1.6;color:var(--text1);background:#fff;
                  outline:none;white-space:pre-wrap;word-break:break-word"
-          data-placeholder="고객 문의 또는 요청 내용을 입력하세요. 스크린샷은 Ctrl+V로 바로 붙여넣기 가능합니다."
+          data-placeholder="내용을 입력하세요"
           data-empty="true"
           onfocus="this.removeAttribute('data-empty')"
           onblur="if(!this.innerText.trim())this.setAttribute('data-empty','true')"
@@ -1296,7 +1296,7 @@ function initApp(){
   document.getElementById('nav-register').style.display=canEdit?'':'none';
   document.getElementById('cs-list-register-btn').style.display=canEdit?'':'none';
   document.getElementById('nav-config').style.display=['admin','dev','cs'].includes(u.role)?'':'none';
-  allCS=[...allCS]; // 복사
+  // allCS는 초기 로드 시 한 번만 설정
   computeSLA();
   renderAll();
   showPage('overview',document.querySelector('.nav-item.active')||document.querySelector('.nav-item'));
@@ -1751,7 +1751,17 @@ function openRegisterModal(){
   if(document.getElementById('f-title')) document.getElementById('f-title').value='';
   document.getElementById('f-content').value='';
   const ed=document.getElementById('f-content-editor');
-  if(ed){ed.innerHTML='';ed.setAttribute('data-empty','true');}
+  if(ed){
+    ed.innerHTML =
+      '* 계정 :&nbsp;<br>' +
+      '* 버전 :&nbsp;<br>' +
+      '* 렌탈 / 모빌리티 여부 :&nbsp;<br>' +
+      '* 요청사항 :&nbsp;<br>' +
+      '* 관련 화면/페이지 :&nbsp;<br>' +
+      '* 관련 화면캡처 :&nbsp; ' +
+      '<span style="color:#b0aea6;font-size:11px">(스크린샷은 Ctrl+V로 바로 붙여넣기 가능합니다)</span>';
+    ed.removeAttribute('data-empty');
+  }
   document.getElementById('modal-err').classList.remove('show');
   if(currentUserData&&currentUserData.staff) document.getElementById('f-staff').value=currentUserData.name;
   // 등록 페이지로 이동
