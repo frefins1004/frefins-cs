@@ -1117,17 +1117,20 @@ const FB_DEFAULTS = {
 
 // ── Firebase Firestore 초기화 (기기간 동기화) ─────────────────────────
 let db = null;
-try {
-  const fbCfg = {
-    apiKey:    localStorage.getItem('fb_apiKey')     || FB_DEFAULTS.apiKey,
-    authDomain:localStorage.getItem('fb_authDomain') || FB_DEFAULTS.authDomain,
-    projectId: localStorage.getItem('fb_projectId')  || FB_DEFAULTS.projectId,
-    appId:     localStorage.getItem('fb_appId')      || FB_DEFAULTS.appId,
-  };
-  if (!firebase.apps.length) firebase.initializeApp(fbCfg);
-  db = firebase.firestore();
-  console.log('✅ Firestore 연결됨');
-} catch(e) { console.warn('Firebase 초기화 실패:', e); db = null; }
+function initFirebaseDB() {
+  try {
+    if (typeof firebase === 'undefined') { console.warn('Firebase SDK 미로드'); return; }
+    const fbCfg = {
+      apiKey:    localStorage.getItem('fb_apiKey')     || FB_DEFAULTS.apiKey,
+      authDomain:localStorage.getItem('fb_authDomain') || FB_DEFAULTS.authDomain,
+      projectId: localStorage.getItem('fb_projectId')  || FB_DEFAULTS.projectId,
+      appId:     localStorage.getItem('fb_appId')      || FB_DEFAULTS.appId,
+    };
+    if (!firebase.apps.length) firebase.initializeApp(fbCfg);
+    db = firebase.firestore();
+    console.log('✅ Firestore 연결됨');
+  } catch(e) { console.warn('Firebase 초기화 실패:', e); db = null; }
+}
 
 async function saveCSToFirestore(cs) {
   if (!db) return;
@@ -1364,8 +1367,9 @@ function initApp(){
   computeSLA();
   renderAll();
   showPage('overview',document.querySelector('.nav-item.active')||document.querySelector('.nav-item'));
-  // Firestore에서 신규 CS 동기화 (다른 기기 등록 건 반영)
-  setTimeout(loadCSFromFirestore, 500);
+  // Firestore 초기화 후 동기화
+  initFirebaseDB();
+  setTimeout(loadCSFromFirestore, 800);
   try{localStorage.setItem('frp_session',JSON.stringify(u));}catch(e){}
 }
 
