@@ -1113,6 +1113,55 @@ const FB_DEFAULTS = {
   projectId:'frefins-cs',
   appId:'1:969318180096:web:f3a3107cd00562c026bfe5'
 };
+
+// ── Firebase Firestore 초기화 (기기간 동기화) ─────────────────────────
+let db = null;
+try {
+  const fbCfg = {
+    apiKey:    localStorage.getItem('fb_apiKey')     || FB_DEFAULTS.apiKey,
+    authDomain:localStorage.getItem('fb_authDomain') || FB_DEFAULTS.authDomain,
+    projectId: localStorage.getItem('fb_projectId')  || FB_DEFAULTS.projectId,
+    appId:     localStorage.getItem('fb_appId')      || FB_DEFAULTS.appId,
+  };
+  if (!firebase.apps.length) firebase.initializeApp(fbCfg);
+  db = firebase.firestore();
+  console.log('✅ Firestore 연결됨');
+} catch(e) { console.warn('Firebase 초기화 실패:', e); db = null; }
+
+async function saveCSToFirestore(cs) {
+  if (!db) return;
+  try {
+    const data = Object.assign({}, cs);
+    delete data.images; // base64 이미지 제외 (용량)
+    delete data.contentHtml;
+    data.savedAt = new Date().toISOString();
+    await db.collection('cs_extra').doc(cs.id).set(data);
+  } catch(e) { console.warn('Firestore 저장 실패:', e); }
+}
+
+async function loadCSFromFirestore() {
+  if (!db) return;
+  try {
+    const snap = await db.collection('cs_extra').get();
+    let loaded = 0;
+    snap.forEach(doc => {
+      const cs = doc.data();
+      if (cs && cs.id && !allCS.find(x => x.id === cs.id)) {
+        allCS.unshift(cs);
+        loaded++;
+      }
+    });
+    if (loaded > 0) {
+      console.log('Firestore에서 ' + loaded + '건 로드');
+      computeSLA(); renderAll();
+    }
+  } catch(e) { console.warn('Firestore 로드 실패:', e); }
+}
+
+async function deleteCSFromFirestore(id) {
+  if (!db) return;
+  try { await db.collection('cs_extra').doc(id).delete(); } catch(e) {}
+}
 const TRELLO_CONFIG = {
   key:    localStorage.getItem('trello_key')    ||'3d5fde1f5c6c6429927888215d26a82c',
   token:  localStorage.getItem('trello_token')  || _t,
@@ -1314,6 +1363,8 @@ function initApp(){
   computeSLA();
   renderAll();
   showPage('overview',document.querySelector('.nav-item.active')||document.querySelector('.nav-item'));
+  // Firestore에서 신규 CS 동기화 (다른 기기 등록 건 반영)
+  setTimeout(loadCSFromFirestore, 500);
   try{localStorage.setItem('frp_session',JSON.stringify(u));}catch(e){}
 }
 
@@ -1750,6 +1801,7 @@ function deleteCS(id){
     const extra = allCS.filter(c => c.id.startsWith('cs'));
     localStorage.setItem('frp_cs_extra', JSON.stringify(extra));
   } catch(e) {}
+  if(tid.startsWith('cs')) deleteCSFromFirestore(tid);
   closeDetail();
   computeSLA(); renderAll();
   showToast('삭제되었습니다.');
@@ -1892,12 +1944,13 @@ async function submitCS(){
   }else{
     const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
-    // localStorage에 사용자 등록 CS 저장 (영구 보존)
+    // localStorage + Firestore 동시 저장 (기기간 동기화)
     try {
       const extra = JSON.parse(localStorage.getItem('frp_cs_extra') || '[]');
       extra.unshift(newCS);
       localStorage.setItem('frp_cs_extra', JSON.stringify(extra));
     } catch(e) {}
+    saveCSToFirestore(newCS); // 비동기 - 다른 기기 동기화
     const trelloTypes=['오류','개선 요청','수정','삭제'];
     if(trelloTypes.includes(type)){
       try{
