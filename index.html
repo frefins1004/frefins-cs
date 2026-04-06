@@ -1079,6 +1079,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <option value="개발">개발 반영</option>
           <option value="보류">보류</option>
           <option value="미반영">미반영</option>
+          <option value="상담완료">상담완료</option>
         </select>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px">
@@ -2209,7 +2210,8 @@ function renderVOC(){
   const regBtn=document.getElementById('voc-reg-btn');
   if(regBtn&&currentUserData&&['cs','admin'].includes(currentUserData.role)) regBtn.style.display='';
   const devDone=data.filter(v=>v.dev&&v.dev.includes('개발')).length;
-  const pending=data.length-devDone;
+  const counselDone=data.filter(v=>v.dev==='상담완료').length;
+  const pending=data.length-devDone-counselDone;
   const set=(n,v)=>{const e=document.getElementById(n);if(e)e.textContent=v;};
   set('voc-total',data.length+'건');
   set('voc-dev',devDone+'건');
@@ -2222,7 +2224,11 @@ function renderVOC(){
   tbody.innerHTML=data.map(v=>{
     const uc=urgencyColor[v.urgency]||'#5a5955';
     const cc=categoryColor[v.category]||'#888';
-    const devBadge=v.dev?`<span style="background:#e8f5f1;color:#17996e;border:1px solid #b3ddd2;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">✅ ${v.dev}</span>`:`<span style="background:#fff8e6;color:#7a4808;border:1px solid #f0d89a;padding:2px 8px;border-radius:20px;font-size:11px">검토 중</span>`;
+    const devBadge=v.dev==='상담완료'
+    ? `<span style="background:#e8f0ff;color:#3a5bd4;border:1px solid #b3c4f5;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">💬 상담완료</span>`
+    : v.dev
+      ? `<span style="background:#e8f5f1;color:#17996e;border:1px solid #b3ddd2;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">✅ ${v.dev}</span>`
+      : `<span style="background:#fff8e6;color:#7a4808;border:1px solid #f0d89a;padding:2px 8px;border-radius:20px;font-size:11px">검토 중</span>`;
     return `<div style="padding:14px 18px;border-bottom:1px solid #f0ede8">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
         <span style="font-size:11px;color:#96948d">${v.date}</span>
