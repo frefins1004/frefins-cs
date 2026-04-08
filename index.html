@@ -693,6 +693,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         <select id="month-filter" onchange="filterMonth(this.value)" style="font-size:12px;padding:4px 10px;border:0.5px solid var(--border2);border-radius:999px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
           <option value="all">전체 월</option>
         </select>
+        <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;white-space:nowrap;margin-left:4px">기간</span>
+        <input type="date" id="date-from" onchange="filterDateRange()" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
+        <span style="font-size:11px;color:var(--text3);align-self:center">~</span>
+        <input type="date" id="date-to" onchange="filterDateRange()" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
+        <button onclick="clearDateRange()" id="date-clear-btn" style="display:none;font-size:11px;padding:3px 8px;border:0.5px solid var(--border2);border-radius:999px;background:var(--surface);color:var(--red);cursor:pointer">✕ 초기화</button>
         <input class="search-box" placeholder="업체명·내용 검색..." oninput="filterSearch(this.value)" style="width:150px">
         <button class="btn btn-primary btn-sm" id="cs-list-register-btn" onclick="openRegisterModal()" style="margin-left:auto">+ CS 등록</button>
       </div>
@@ -838,6 +843,14 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <div class="page-sub">frefins.com/support 접수 현황</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openVocModal()" id="voc-reg-btn" style="display:none">+ 등록</button>
+      </div>
+      <!-- 처리상태 필터 -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap" id="voc-filter-bar">
+        <button class="fbtn active" onclick="filterVoc('all',this)" style="padding:5px 14px;border-radius:20px;border:1px solid var(--teal-m);background:var(--teal-m);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">전체</button>
+        <button class="fbtn" onclick="filterVoc('개발',this)" style="padding:5px 14px;border-radius:20px;border:1px solid #e0deda;background:#fff;color:#5a5955;font-size:12px;cursor:pointer;font-family:inherit">✅ 개발반영</button>
+        <button class="fbtn" onclick="filterVoc('',this)" style="padding:5px 14px;border-radius:20px;border:1px solid #e0deda;background:#fff;color:#5a5955;font-size:12px;cursor:pointer;font-family:inherit">🔍 검토 중</button>
+        <button class="fbtn" onclick="filterVoc('보류',this)" style="padding:5px 14px;border-radius:20px;border:1px solid #e0deda;background:#fff;color:#5a5955;font-size:12px;cursor:pointer;font-family:inherit">⏸ 보류</button>
+        <button class="fbtn" onclick="filterVoc('상담완료',this)" style="padding:5px 14px;border-radius:20px;border:1px solid #e0deda;background:#fff;color:#5a5955;font-size:12px;cursor:pointer;font-family:inherit">💬 상담완료</button>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
         <div style="background:#ffffff;border:1px solid #e0deda;border-radius:12px;padding:14px 16px">
@@ -1049,7 +1062,17 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
       <button onclick="closeVocModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#96948d;line-height:1">×</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="field"><label>접수일</label><input type="date" id="vf-date"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label>접수일</label><input type="date" id="vf-date"></div>
+        <div class="field"><label>긴급도</label>
+          <select id="vf-urgency">
+            <option value="보통">보통</option>
+            <option value="급함">급함</option>
+            <option value="매우 급함">매우 급함</option>
+            <option value="낮음">낮음</option>
+          </select>
+        </div>
+      </div>
       <div class="field"><label>업체명 / 성함</label><input id="vf-co" placeholder="예: 현대아이티 / 김철수"></div>
       <div class="field"><label>카테고리</label>
         <select id="vf-category">
@@ -1061,19 +1084,31 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <option value="기타">기타</option>
         </select>
       </div>
-      <div class="field"><label>긴급도</label>
-        <select id="vf-urgency">
-          <option value="보통">보통</option>
-          <option value="급함">급함</option>
-          <option value="매우 급함">매우 급함</option>
-          <option value="낮음">낮음</option>
-        </select>
-      </div>
       <div class="field"><label>제목</label><input id="vf-title" placeholder="요청/문의 제목"></div>
-      <div class="field"><label>내용</label>
-        <textarea id="vf-content" rows="4" placeholder="상세 내용을 입력하세요" style="width:100%;padding:10px;border:1px solid #e0deda;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+      <div class="field">
+        <label>내용 <span style="font-size:11px;color:var(--text3);font-weight:400">— 스크린샷 Ctrl+V 붙여넣기 가능</span></label>
+        <div id="vf-content-editor"
+          contenteditable="true"
+          style="min-height:100px;max-height:250px;overflow-y:auto;border:1px solid #e0deda;border-radius:8px;
+                 padding:10px;font-size:13px;font-family:inherit;line-height:1.6;color:#1a1a18;
+                 background:#fff;outline:none;word-break:break-word"
+          data-placeholder="상세 내용을 입력하세요"
+          data-empty="true"
+          onfocus="this.removeAttribute('data-empty')"
+          onblur="if(!this.innerText.trim())this.setAttribute('data-empty','true')"
+          oninput="this.removeAttribute('data-empty')"
+          onpaste="handleVocPaste(event)"></div>
+        <textarea id="vf-content" style="display:none"></textarea>
       </div>
-      <div class="field"><label>개발 반영 여부</label>
+      <div class="field"><label>첨부파일</label>
+        <input type="file" id="vf-file" multiple accept="image/*,.pdf,.xlsx,.xls,.docx,.doc"
+          style="font-size:12px;padding:6px;border:1px solid #e0deda;border-radius:8px;width:100%;box-sizing:border-box">
+        <div id="vf-file-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+      </div>
+      <div class="field"><label>비고</label>
+        <textarea id="vf-note" rows="2" placeholder="추가 메모나 참고사항" style="width:100%;padding:10px;border:1px solid #e0deda;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>
+      </div>
+      <div class="field"><label>처리 상태</label>
         <select id="vf-dev">
           <option value="">검토 중</option>
           <option value="개발">개발 반영</option>
@@ -1204,6 +1239,8 @@ let statusFilter = 'all';
 let monthFilter = 'all';
 let searchTerm = '';
 let breachOnly = false;
+let dateFrom = '';
+let dateTo = '';
 let breachStatusFilter = 'active';
 let breachTypeFilter = 'all';
 let breachSearch = '';
@@ -1654,17 +1691,55 @@ function filterStatus(s){
   if(el) el.classList.add('active');
   renderCSTable(true);
 }
-function filterMonth(v){ monthFilter=v; renderCSTable(true); }
+function filterMonth(v){
+  monthFilter=v;
+  // 월 선택 시 기간 필터 초기화
+  if(v!=='all'){ dateFrom=''; dateTo='';
+    const df=document.getElementById('date-from');
+    const dt=document.getElementById('date-to');
+    if(df) df.value=''; if(dt) dt.value='';
+    const cb=document.getElementById('date-clear-btn');
+    if(cb) cb.style.display='none';
+  }
+  renderCSTable(true);
+}
+function filterDateRange(){
+  const df=document.getElementById('date-from');
+  const dt=document.getElementById('date-to');
+  dateFrom=df?df.value:'';
+  dateTo=dt?dt.value:'';
+  // 기간 설정 시 월 필터 초기화
+  if(dateFrom||dateTo){
+    monthFilter='all';
+    const sel=document.getElementById('month-filter');
+    if(sel) sel.value='all';
+  }
+  const cb=document.getElementById('date-clear-btn');
+  if(cb) cb.style.display=(dateFrom||dateTo)?'':'none';
+  renderCSTable(true);
+}
+function clearDateRange(){
+  dateFrom=''; dateTo='';
+  const df=document.getElementById('date-from');
+  const dt=document.getElementById('date-to');
+  if(df) df.value=''; if(dt) dt.value='';
+  const cb=document.getElementById('date-clear-btn');
+  if(cb) cb.style.display='none';
+  renderCSTable(true);
+}
 function searchCS(v){ searchTerm=v; renderCSTable(true); }
 function renderCSTable(resetPage){
   if(resetPage) csPage=1;
   let data=allCS.filter(c=>{
     const mt=typeFilter==='all'||c.type===typeFilter;
     const mb=!breachOnly||(c.sla&&c.sla.includes('초과'));
-    const ms=!searchTerm||(c.co&&c.co.includes(searchTerm))||(c.content&&c.content.includes(searchTerm));
+    const ms=!searchTerm||(c.co&&c.co.includes(searchTerm))||(c.content&&c.content.includes(searchTerm))||(c.title&&c.title.includes(searchTerm));
     const mst=statusFilter==='all'?true:statusFilter==='active'?(c.status==='접수'||c.status==='진행 중'):c.status===statusFilter;
     const mm=monthFilter==='all'||c.date.slice(0,7)===monthFilter;
-    return mt&&mb&&ms&&mst&&mm;
+    // 기간 조회 필터
+    const mdf=!dateFrom||c.date>=dateFrom;
+    const mdt=!dateTo||c.date<=dateTo;
+    return mt&&mb&&ms&&mst&&mm&&mdf&&mdt;
   });
   data.sort((a,b)=>b.date.localeCompare(a.date));
   const total=data.length;
@@ -2152,6 +2227,9 @@ function renderCLevelPage(){
   set('c-breach',allBreaches.length+'건');
   const sub=document.getElementById('clevel-sub');
   if(sub) sub.textContent=`${thisYM.replace('-','년 ')}월 기준`;
+  // 초록 박스 제목 현재 월로 업데이트
+  const monthTitle=document.getElementById('clevel-month-title');
+  if(monthTitle) monthTitle.textContent=`${parseInt(thisYM.split('-')[1])}월 CS 운영 현황`;
 
   // 인사이트
   const typeCount={};
@@ -2210,7 +2288,10 @@ function renderCLevelPage(){
 
 // ============ VOC ============
 function renderVOC(){
-  const data=VOC_DATA||[];
+  const rawData=VOC_DATA||[];
+  // 필터 적용
+  const data = vocFilter==='all' ? rawData :
+    rawData.filter(v => v.dev === vocFilter);
   const regBtn=document.getElementById('voc-reg-btn');
   if(regBtn&&currentUserData&&['cs','admin'].includes(currentUserData.role)) regBtn.style.display='';
   const devDone=data.filter(v=>v.dev&&v.dev.includes('개발')).length;
@@ -2242,7 +2323,8 @@ function renderVOC(){
         ${devBadge}
       </div>
       <div style="font-size:13px;font-weight:600;color:#1a1a18;margin-bottom:4px">${v.title}</div>
-      <div style="font-size:12px;color:#5a5955;line-height:1.5">${v.content.slice(0,150)}${v.content.length>150?'…':''}</div>
+      <div style="font-size:12px;color:#5a5955;line-height:1.5">${(v.content||'').slice(0,150)}${(v.content||'').length>150?'…':''}</div>
+      ${v.note?`<div style="font-size:11px;color:#96948d;margin-top:4px;padding:4px 8px;background:#f9f8f6;border-radius:6px">📝 ${v.note}</div>`:''}
       ${canEdit?`<div style="margin-top:8px;display:flex;gap:6px">
         <button onclick="openVocModal(VOC_DATA.find(x=>x.id==='${v.id}'))" style="padding:3px 10px;border:1px solid #e0deda;border-radius:6px;font-size:11px;background:#fff;cursor:pointer;color:#5a5955">수정</button>
         <button onclick="deleteVoc('${v.id}')" style="padding:3px 10px;border:1px solid #fdd;border-radius:6px;font-size:11px;background:#fff;cursor:pointer;color:#9e2828">삭제</button>
@@ -2256,24 +2338,75 @@ function openVocModal(item){
   document.getElementById('vf-category').value=item?item.category:'';
   document.getElementById('vf-urgency').value=item?item.urgency:'보통';
   document.getElementById('vf-title').value=item?item.title:'';
-  document.getElementById('vf-content').value=item?item.content:'';
   document.getElementById('vf-dev').value=item?item.dev:'';
+  if(document.getElementById('vf-note')) document.getElementById('vf-note').value=item?item.note||'':'';
+  const ed=document.getElementById('vf-content-editor');
+  if(ed){
+    ed.innerHTML=item?(item.contentHtml||item.content||''):'';
+    if(!ed.innerHTML) ed.setAttribute('data-empty','true');
+    else ed.removeAttribute('data-empty');
+  }
+  if(document.getElementById('vf-file')) document.getElementById('vf-file').value='';
+  document.getElementById('vf-file-preview').innerHTML='';
   document.getElementById('voc-modal')._editId=item?item.id:null;
   document.getElementById('voc-modal').style.display='flex';
 }
 function closeVocModal(){ document.getElementById('voc-modal').style.display='none'; }
+// VOC 이미지 붙여넣기
+function handleVocPaste(e){
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      e.preventDefault();
+      const file=item.getAsFile();
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const img=document.createElement('img');
+        img.src=ev.target.result;
+        img.style.cssText='max-width:100%;border-radius:6px;margin:4px 0;display:block;cursor:pointer;border:2px solid transparent';
+        img.title='클릭: 삭제';
+        img.onmouseenter=()=>{img.style.border='2px solid #de4545';img.style.opacity='0.85';};
+        img.onmouseleave=()=>{img.style.border='2px solid transparent';img.style.opacity='1';};
+        img.onclick=()=>{if(confirm('이미지를 삭제하시겠습니까?'))img.remove();};
+        const ed=document.getElementById('vf-content-editor');
+        const sel=window.getSelection();
+        if(sel.rangeCount){const r=sel.getRangeAt(0);r.deleteContents();r.insertNode(img);r.setStartAfter(img);r.collapse(true);sel.removeAllRanges();sel.addRange(r);}
+        else ed.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+  }
+}
+
+// VOC 필터
+let vocFilter = 'all';
+function filterVoc(val, el){
+  vocFilter = val;
+  document.querySelectorAll('#voc-filter-bar .fbtn').forEach(b=>{
+    b.style.background='#fff';b.style.color='#5a5955';b.style.borderColor='#e0deda';
+  });
+  el.style.background='var(--teal-m)';el.style.color='#fff';el.style.borderColor='var(--teal-m)';
+  renderVOC();
+}
+
 function saveVoc(){
   const date=document.getElementById('vf-date').value;
   const co=document.getElementById('vf-co').value.trim();
   const category=document.getElementById('vf-category').value;
   const urgency=document.getElementById('vf-urgency').value;
   const title=document.getElementById('vf-title').value.trim();
-  const content=document.getElementById('vf-content').value.trim();
+  // 에디터 내용 추출
+  const ed=document.getElementById('vf-content-editor');
+  const content=ed?ed.innerText.trim():'';
+  const contentHtml=ed?ed.innerHTML:'';
   const dev=document.getElementById('vf-dev').value;
+  const note=document.getElementById('vf-note')?.value.trim()||'';
   if(!co||!title){showToast('업체명과 제목은 필수입니다');return;}
   const editId=document.getElementById('voc-modal')._editId;
-  if(editId){const idx=VOC_DATA.findIndex(v=>v.id===editId);if(idx>=0) VOC_DATA[idx]={...VOC_DATA[idx],date,co,category,urgency,title,content,dev};}
-  else VOC_DATA.unshift({id:'voc'+Date.now(),date,co,category,urgency,title,content,dev});
+  if(editId){const idx=VOC_DATA.findIndex(v=>v.id===editId);if(idx>=0) VOC_DATA[idx]={...VOC_DATA[idx],date,co,category,urgency,title,content,contentHtml,dev,note};}
+  else VOC_DATA.unshift({id:'voc'+Date.now(),date,co,category,urgency,title,content,contentHtml,dev,note});
   try{localStorage.setItem('frp_voc_data',JSON.stringify(VOC_DATA));}catch(e){}
   closeVocModal(); renderVOC();
   showToast('고객의 목소리 '+(editId?'수정':'등록')+' 완료 ✓');
