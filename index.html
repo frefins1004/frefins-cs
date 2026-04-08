@@ -1142,6 +1142,36 @@ let allCS = [{"id":"n0248","date":"2026-03-27","channel":"채널톡","type":"단
     }
   } catch(e) {}
 })();
+
+// localStorage에서 상태 변경사항 복원 (기존 256건 포함)
+(function(){
+  try {
+    const saved = localStorage.getItem('frp_cs_changes');
+    if (saved) {
+      const map = JSON.parse(saved);
+      allCS.forEach(cs => { if (map[cs.id]) Object.assign(cs, map[cs.id]); });
+    }
+  } catch(e) {}
+})();
+
+// 상태/메모 변경사항 저장 헬퍼 (localStorage + Firestore)
+function saveCSChange(cs) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('frp_cs_changes') || '{}');
+    saved[cs.id] = {
+      status: cs.status, sla: cs.sla,
+      memo: cs.memo || '', trelloUrl: cs.trelloUrl || '',
+    };
+    localStorage.setItem('frp_cs_changes', JSON.stringify(saved));
+  } catch(e) {}
+  if (typeof db !== 'undefined' && db) {
+    db.collection('cs_changes').doc(cs.id).set({
+      status: cs.status, sla: cs.sla,
+      memo: cs.memo || '', trelloUrl: cs.trelloUrl || '',
+      updatedAt: new Date().toISOString()
+    }).catch(e => {});
+  }
+}
 const _t = ['ATTA2dbcc0eaa5d5becd','4b32214e4266d6b47b06','7173cdd37b2bf424ed7c','e9a73ecd5091F75E'].join('');
 const FB_DEFAULTS = {
   apiKey:'AIzaSyBsRwPVnkPNdtT9vhwjOD3JIDG6AHNpz2M',
@@ -1181,6 +1211,7 @@ async function saveCSToFirestore(cs) {
 async function loadCSFromFirestore() {
   if (!db) return;
   try {
+    // 1. 신규 등록 건 로드
     const snap = await db.collection('cs_extra').get();
     let loaded = 0;
     snap.forEach(doc => {
@@ -1190,8 +1221,26 @@ async function loadCSFromFirestore() {
         loaded++;
       }
     });
-    if (loaded > 0) {
-      console.log('Firestore에서 ' + loaded + '건 로드');
+
+    // 2. 상태 변경사항 로드 (기존 건 포함)
+    const changesSnap = await db.collection('cs_changes').get();
+    let changed = 0;
+    changesSnap.forEach(doc => {
+      const change = doc.data();
+      const cs = allCS.find(x => x.id === doc.id);
+      if (cs && change) {
+        Object.assign(cs, {
+          status: change.status || cs.status,
+          sla: change.sla || cs.sla,
+          memo: change.memo || cs.memo,
+          trelloUrl: change.trelloUrl || cs.trelloUrl,
+        });
+        changed++;
+      }
+    });
+
+    if (loaded > 0 || changed > 0) {
+      console.log('Firestore 로드: 신규 ' + loaded + '건, 상태변경 ' + changed + '건');
       computeSLA(); renderAll();
     }
   } catch(e) { console.warn('Firestore 로드 실패:', e); }
@@ -1845,8 +1894,9 @@ async function updateStatus(val){
   if(!cs) return;
   cs.status=val;
   if(val==='완료') cs.sla='OK';
+  saveCSChange(cs); // 상태 영구 저장
   computeSLA(); renderAll();
-  showToast('상태가 '+val+'(으)로 변경되었습니다.');
+  showToast('상태가 '+val+'(으)로 변경되었습니다. ✓');
 }
 function openEditModal(){ editCS(selectedCSId); }
 function editCS(id){
@@ -2020,6 +2070,7 @@ async function submitCS(){
       const extra = allCS.filter(c => c.id.startsWith('cs'));
       localStorage.setItem('frp_cs_extra', JSON.stringify(extra));
     } catch(e) {}
+    saveCSChange(cs); // 상태/메모 변경 영구 저장
     showToast('수정했습니다 ✓');
   }else{
     const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
