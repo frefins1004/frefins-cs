@@ -1460,7 +1460,19 @@ function initApp(){
 }
 
 // ============ NAVIGATION ============
+let _pageHistory = [];
+let _currentPage = 'overview';
+
 function showPage(id, el){
+  // 앱 내 히스토리 스택에 현재 페이지 저장
+  if(_currentPage && _currentPage !== id) {
+    _pageHistory.push(_currentPage);
+    if(_pageHistory.length > 20) _pageHistory.shift();
+  }
+  _currentPage = id;
+  // 브라우저 히스토리에도 pushState (뒤로가기 가로채기용)
+  history.pushState({page: id}, '', location.href.split('?')[0]);
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   const pg=document.getElementById('page-'+id);
@@ -2533,6 +2545,27 @@ function createUser(){
 }
 
 // ============ INIT (페이지 로드) ============
+// 브라우저 뒤로가기 가로채서 앱 내 이전 페이지로 이동
+window.addEventListener('popstate', function(e) {
+  if(_pageHistory.length > 0) {
+    const prev = _pageHistory.pop();
+    _currentPage = prev;
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    const pg = document.getElementById('page-'+prev);
+    if(pg) pg.classList.add('active');
+    syncMobileTab(prev);
+    // 상태 복원 (상세 패널 닫기)
+    const dp = document.getElementById('detail-panel');
+    if(dp) dp.classList.remove('show');
+    // pushState로 스택 유지
+    history.pushState({page: prev}, '', location.href.split('?')[0]);
+  } else {
+    // 히스토리 없으면 overview로
+    history.pushState({page:'overview'}, '', location.href.split('?')[0]);
+  }
+});
+
 (function init(){
   if(checkMagicLink()) return;
   // 저장된 세션 복원
