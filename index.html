@@ -1252,10 +1252,10 @@ async function deleteCSFromFirestore(id) {
   try { await db.collection('cs_extra').doc(id).delete(); } catch(e) {}
 }
 const TRELLO_CONFIG = {
-  key:    localStorage.getItem('trello_key')    ||'3d5fde1f5c6c6429927888215d26a82c',
-  token:  localStorage.getItem('trello_token')  || _t,
-  listId: localStorage.getItem('trello_listId') ||'671b466151fc7351453b29ca',
-  boardId:localStorage.getItem('trello_boardId')||'UBgxszw3',
+  key:    '3d5fde1f5c6c6429927888215d26a82c',
+  token:  _t,
+  listId: '671b466151fc7351453b29ca',
+  boardId:'UBgxszw3',
   labelIds:  JSON.parse(localStorage.getItem('trello_labelIds')||'{}'),
   memberIds: JSON.parse(localStorage.getItem('trello_memberIds')||'{}'),
 };
