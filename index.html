@@ -648,7 +648,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <div class="detail-field"><div class="detail-label">기업구분</div><div class="detail-value" id="dp-biz">—</div></div>
           <div class="detail-field"><div class="detail-label">업체명</div><div class="detail-value" id="dp-co">—</div></div>
         </div>
-        <div class="detail-field"><div class="detail-label">내용</div><div class="detail-value" id="dp-content" style="line-height:1.7">—</div></div>
+        <div class="detail-field"><div class="detail-label">내용</div><div class="detail-value" id="dp-content" style="line-height:1.8;font-size:13px">—</div></div>
         <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 상태 / SLA</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
             <span id="dp-status">—</span>
@@ -1790,6 +1790,7 @@ function clearDateRange(){
   renderCSTable(true);
 }
 function searchCS(v){ searchTerm=v; renderCSTable(true); }
+function filterSearch(v){ searchTerm=v; renderCSTable(true); }
 function renderCSTable(resetPage){
   if(resetPage) csPage=1;
   let data=allCS.filter(c=>{
@@ -1868,7 +1869,8 @@ function selectCS(id){
   document.getElementById('dp-type').innerHTML=typeBadge(cs.type);
   document.getElementById('dp-biz').textContent=cs.biz;
   document.getElementById('dp-co').textContent=cs.co;
-  document.getElementById('dp-content').textContent=cs.content;
+  document.getElementById('dp-content').innerHTML=
+    (cs.content||'').replace(/\n/g,'<br>').replace(/\*/g,'•');
   document.getElementById('dp-status').innerHTML=statusBadge(cs.status);
   document.getElementById('dp-sla').innerHTML=slaBadge(cs.sla);
   document.getElementById('dp-memo').textContent=cs.memo||'(없음)';
