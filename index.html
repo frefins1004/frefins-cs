@@ -699,6 +699,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         <input type="date" id="date-to" onchange="filterDateRange()" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;outline:none">
         <button onclick="clearDateRange()" id="date-clear-btn" style="display:none;font-size:11px;padding:3px 8px;border:0.5px solid var(--border2);border-radius:999px;background:var(--surface);color:var(--red);cursor:pointer">✕ 초기화</button>
         <input class="search-box" placeholder="업체명·내용 검색..." oninput="filterSearch(this.value)" style="width:150px">
+        <button class="btn btn-sm" onclick="downloadCSExcel()" style="background:#1d6f42;color:#fff;border:none;display:flex;align-items:center;gap:4px;font-size:12px">📥 엑셀 다운로드</button>
         <button class="btn btn-primary btn-sm" id="cs-list-register-btn" onclick="openRegisterModal()" style="margin-left:auto">+ CS 등록</button>
       </div>
       <div class="tbl-card">
@@ -766,12 +767,13 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
         <div class="field"><label>업체명 *</label><input type="text" id="f-co" placeholder="업체명 또는 고객명"></div>
         <div class="field"><label>담당자 *</label>
-          <select id="f-staff">
-            <option value="유소미">유소미</option>
-            <option value="안소진">안소진</option>
-            <option value="김수아">김수아</option>
-            <option value="한진선">한진선</option>
-          </select>
+          <input type="text" id="f-staff" placeholder="담당자 이름 입력" list="staff-list">
+          <datalist id="staff-list">
+            <option value="유소미">
+            <option value="안소진">
+            <option value="김수아">
+            <option value="한진선">
+          </datalist>
         </div>
       </div>
 
@@ -1480,6 +1482,12 @@ function showPage(id, el){
   if(pg) pg.classList.add('active');
   if(el) el.classList.add('active');
   syncMobileTab(id);
+  // CS 목록으로 이동 시 상세 패널 닫기
+  if(id==='cs-list') {
+    const dp = document.getElementById('detail-panel');
+    if(dp) dp.classList.remove('show');
+    selectedCSId = null;
+  }
   if(id==='sla-breach') renderBreachTable();
   if(id==='voc') renderVOC();
   if(id==='config') loadConfigFields();
@@ -1791,6 +1799,45 @@ function clearDateRange(){
 }
 function searchCS(v){ searchTerm=v; renderCSTable(true); }
 function filterSearch(v){ searchTerm=v; renderCSTable(true); }
+
+function downloadCSExcel() {
+  // 현재 필터 적용된 데이터 가져오기
+  let data = allCS.filter(c => {
+    const mt = typeFilter==='all' || c.type===typeFilter;
+    const mb = !breachOnly || (c.sla && c.sla.includes('초과'));
+    const ms = !searchTerm || (c.co&&c.co.includes(searchTerm)) || (c.content&&c.content.includes(searchTerm)) || (c.title&&c.title.includes(searchTerm));
+    const mst = statusFilter==='all' ? true : statusFilter==='active' ? (c.status==='접수'||c.status==='진행 중') : c.status===statusFilter;
+    const mm = monthFilter==='all' || c.date.slice(0,7)===monthFilter;
+    const mdf = !dateFrom || c.date>=dateFrom;
+    const mdt = !dateTo || c.date<=dateTo;
+    return mt&&mb&&ms&&mst&&mm&&mdf&&mdt;
+  });
+  data.sort((a,b) => b.date.localeCompare(a.date));
+
+  // CSV 생성
+  const headers = ['접수일','채널','유형','기업구분','업체명','제목','내용','상태','SLA','담당자','Trello URL','메모'];
+  const rows = data.map(c => [
+    c.date, c.channel, c.type, c.biz, c.co,
+    c.title||'', (c.content||'').replace(/\n/g,' ').replace(/,/g,'，'),
+    c.status, c.sla||'', c.staff, c.trelloUrl||'',
+    (c.memo||'').replace(/\n/g,' ')
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `프리핀스_CS목록_${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${data.length}건 다운로드 완료 ✓`);
+}
 function renderCSTable(resetPage){
   if(resetPage) csPage=1;
   let data=allCS.filter(c=>{
@@ -1823,7 +1870,7 @@ function renderCSTable(resetPage){
       <td>${typeBadge(c.type)}</td>
       <td>${c.biz}</td>
       <td class="td-main">${c.co}</td>
-      <td class="td-truncate">${c.title||c.content}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello">🔗</a>`:''}</td>
+      <td class="td-truncate">${(c.title||c.content).replace(/\n/g,' · ')}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello">🔗</a>`:''}</td>
       <td>${statusBadge(c.status)}</td>
       <td>${slaBadge(c.sla)}</td>
       <td>${c.staff}</td>
