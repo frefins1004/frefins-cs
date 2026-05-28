@@ -255,7 +255,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
   .modal-row{grid-template-columns:1fr}
 
   /* 상세 패널 */
-  .detail-panel{padding:14px}
+  .detail-panel{padding:16px}
   .detail-grid{grid-template-columns:1fr 1fr}
 
   /* 페이지 헤더 */
@@ -626,10 +626,6 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 
     <!-- CS LIST -->
     <div id="page-cs-list" class="page">
-      <div class="page-header">
-        <div class="page-title">CS 접수 목록</div>
-        <div class="page-sub" id="cs-list-sub">—</div>
-      </div>
       <!-- Detail panel -->
       <div class="detail-panel" id="detail-panel">
         <div class="detail-header">
@@ -669,6 +665,11 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <div class="trello-status" id="dp-trello-url">—</div>
         </div>
       </div>
+      <div class="page-header">
+        <div class="page-title">CS 접수 목록</div>
+        <div class="page-sub" id="cs-list-sub">—</div>
+      </div>
+      
 
       <!-- 처리 상태 필터 -->
       <div class="filter-bar" style="margin-bottom:6px">
@@ -877,6 +878,45 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 
     <!-- SLA BREACH -->
     <div id="page-sla-breach" class="page">
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="detail-header">
+          <div style="font-size:14px;font-weight:700" id="dp-title">—</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openEditModal()" id="dp-edit-btn">수정</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteCS()" id="dp-del-btn">삭제</button>
+            <button class="btn btn-sm" onclick="closeDetail()">닫기</button>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-field"><div class="detail-label">접수일</div><div class="detail-value" id="dp-date">—</div></div>
+          <div class="detail-field"><div class="detail-label">인입 채널</div><div class="detail-value" id="dp-channel">—</div></div>
+          <div class="detail-field"><div class="detail-label">담당자</div><div class="detail-value" id="dp-staff">—</div></div>
+          <div class="detail-field"><div class="detail-label">유형</div><div class="detail-value" id="dp-type">—</div></div>
+          <div class="detail-field"><div class="detail-label">기업구분</div><div class="detail-value" id="dp-biz">—</div></div>
+          <div class="detail-field"><div class="detail-label">업체명</div><div class="detail-value" id="dp-co">—</div></div>
+        </div>
+        <div class="detail-field"><div class="detail-label">내용</div><div class="detail-value" id="dp-content" style="line-height:1.8;font-size:13px">—</div></div>
+        <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 상태 / SLA</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <span id="dp-status">—</span>
+            <span id="dp-sla">—</span>
+            <select id="dp-status-select" onchange="updateStatus(this.value)" style="font-size:12px;padding:4px 8px;border:0.5px solid var(--border2);border-radius:var(--r-sm);background:var(--surface);color:var(--text1);cursor:pointer">
+              <option value="">상태 변경...</option>
+              <option value="접수">접수</option>
+              <option value="진행 중">진행 중</option>
+              <option value="완료">완료</option>
+              <option value="보류">보류</option>
+            </select>
+          </div>
+        </div>
+        <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 내용 메모</div><div class="detail-value" id="dp-memo" style="color:var(--text2)">—</div></div>
+        <div id="dp-images" style="display:none;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+        <div class="trello-box" id="dp-trello" style="display:none">
+          <div class="trello-label">📋 Trello 카드</div>
+          <div class="trello-status" id="dp-trello-url">—</div>
+        </div>
+      </div>
       <div class="page-header"><div class="page-title">SLA 초과 현황</div></div>
 
       <!-- 처리 상태 필터 -->
@@ -1022,6 +1062,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
     </div>
 
   </main>
+
 </div>
 
 <!-- CS 등록/수정 모달 -->
@@ -1484,8 +1525,7 @@ function showPage(id, el){
   syncMobileTab(id);
   // CS 목록으로 이동 시 상세 패널 닫기
   if(id==='cs-list') {
-    const dp = document.getElementById('detail-panel');
-    if(dp) dp.classList.remove('show');
+    document.querySelectorAll('.detail-panel').forEach(dp=>dp.classList.remove('show'));
     selectedCSId = null;
   }
   if(id==='sla-breach') renderBreachTable();
@@ -1905,25 +1945,31 @@ function selectCS(id){
   selectedCSId=id;
   const cs=allCS.find(c=>c.id===id);
   if(!cs) return;
-  const panel=document.getElementById('detail-panel');
+  // 현재 활성 페이지의 detail-panel 찾기
+  const activePage = document.querySelector('.page.active');
+  const panel = (activePage && activePage.querySelector('.detail-panel')) || document.getElementById('detail-panel');
+  // 모든 panel 숨기고 현재 panel만 표시
+  document.querySelectorAll('.detail-panel').forEach(p=>p.classList.remove('show'));
   panel.classList.add('show');
-  document.getElementById('dp-title').textContent=cs.title
+  // panel 기준으로 하위 요소 찾기 (id 중복 문제 해결)
+  const $ = sel => panel.querySelector(sel) || document.querySelector(sel);
+  $('#dp-title').textContent=cs.title
     ? cs.co+' — '+cs.title
     : cs.co+' — '+cs.content.slice(0,40)+(cs.content.length>40?'…':'');
-  document.getElementById('dp-date').textContent=cs.date;
-  document.getElementById('dp-channel').textContent=cs.channel;
-  document.getElementById('dp-staff').textContent=cs.staff;
-  document.getElementById('dp-type').innerHTML=typeBadge(cs.type);
-  document.getElementById('dp-biz').textContent=cs.biz;
-  document.getElementById('dp-co').textContent=cs.co;
-  document.getElementById('dp-content').innerHTML=
+  $('#dp-date').textContent=cs.date;
+  $('#dp-channel').textContent=cs.channel;
+  $('#dp-staff').textContent=cs.staff;
+  $('#dp-type').innerHTML=typeBadge(cs.type);
+  $('#dp-biz').textContent=cs.biz;
+  $('#dp-co').textContent=cs.co;
+  $('#dp-content').innerHTML=
     (cs.content||'').replace(/\n/g,'<br>').replace(/\*/g,'•');
-  document.getElementById('dp-status').innerHTML=statusBadge(cs.status);
-  document.getElementById('dp-sla').innerHTML=slaBadge(cs.sla);
-  document.getElementById('dp-memo').textContent=cs.memo||'(없음)';
+  $('#dp-status').innerHTML=statusBadge(cs.status);
+  $('#dp-sla').innerHTML=slaBadge(cs.sla);
+  $('#dp-memo').textContent=cs.memo||'(없음)';
 
   // 이미지
-  const imgArea=document.getElementById('dp-images');
+  const imgArea=$('#dp-images');
   if(imgArea){
     if(cs.images&&cs.images.length){
       imgArea.style.display='flex';
@@ -1934,21 +1980,21 @@ function selectCS(id){
   }
 
   // Trello
-  const trelloBox=document.getElementById('dp-trello');
-  const trelloUrlEl=document.getElementById('dp-trello-url');
+  const trelloBox=$('#dp-trello');
+  const trelloUrlEl=$('#dp-trello-url');
   if(cs.trelloUrl){
     trelloBox.style.display='';
     trelloUrlEl.innerHTML=`<a href="${cs.trelloUrl}" target="_blank" style="color:var(--blue);word-break:break-all;font-size:12px">🔗 Trello 카드 보기</a>`;
   }else trelloBox.style.display='none';
 
   const canEdit=currentUserData&&['cs','admin'].includes(currentUserData.role);
-  document.getElementById('dp-edit-btn').style.display=canEdit?'':'none';
-  document.getElementById('dp-del-btn').style.display=canEdit?'':'none';
+  $('#dp-edit-btn').style.display=canEdit?'':'none';
+  $('#dp-del-btn').style.display=canEdit?'':'none';
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function closeDetail(){
   selectedCSId=null;
-  document.getElementById('detail-panel').classList.remove('show');
+  document.querySelectorAll('.detail-panel').forEach(dp=>dp.classList.remove('show'));
 }
 async function updateStatus(val){
   if(!val||!selectedCSId) return;
