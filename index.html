@@ -2319,7 +2319,7 @@ function renderBreachTable(){
   const tbody=document.getElementById('breach-tbody');
   if(!tbody) return;
   tbody.innerHTML=data.map(c=>`
-    <tr onclick="selectCS('${c.id}');showPage('cs-list',document.getElementById('nav-cs'))">
+    <tr onclick="selectCSFromBreach('${c.id}')" style="cursor:pointer">
       <td>${c.date}</td>
       <td>${typeBadge(c.type)}</td>
       <td>${c.biz}</td>
@@ -2329,6 +2329,17 @@ function renderBreachTable(){
       <td>${statusBadge(c.status)}</td>
       <td>${c.staff}</td>
     </tr>`).join('');
+}
+function selectCSFromBreach(id) {
+  // SLA 초과 페이지에서 상세 패널 표시 (페이지 이동 없이)
+  selectCS(id);
+  // detail-panel이 sla-breach 페이지에도 보이도록 위치 조정
+  setTimeout(() => {
+    const panel = document.getElementById('detail-panel');
+    if (panel && panel.classList.contains('show')) {
+      panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+  }, 100);
 }
 function breachFilter(s,el){
   breachStatusFilter=s;
@@ -2410,7 +2421,7 @@ function renderCLevelPage(){
   const bTbody=document.getElementById('clevel-breach-tbody');
   if(bTbody){
     bTbody.innerHTML=activeBreaches.sort((a,b)=>parseInt(b.sla)-parseInt(a.sla)).map(c=>`
-      <tr><td>${c.date}</td><td>${typeBadge(c.type)}</td>
+      <tr style="cursor:pointer" onclick="selectCSFromBreach('${c.id}')"><td>${c.date}</td><td>${typeBadge(c.type)}</td>
       <td class="td-main">${c.co}</td>
       <td class="td-truncate">${c.content.slice(0,40)}...</td>
       <td style="color:var(--red);font-weight:600">▲ ${c.sla}</td>
