@@ -1315,10 +1315,16 @@ let VOC_DATA = [];
 // VOC 복원은 위에서 처리됨
 
 const DEMO_USERS = {
-  'sm.you@frefins.com':   {pw:'cs123!',  name:'유소미',   role:'cs',     avatar:'소미'},
-  'op@frefins.com':       {pw:'op123!',  name:'서비스기획팀', role:'cs',  avatar:'기획'},
-  'dev@frefins.com':      {pw:'dev123!', name:'개발팀',   role:'dev',    avatar:'개발'},
-  'ceo@frefins.com':      {pw:'ceo123!', name:'대표님',   role:'clevel', avatar:'대표'},
+  'sm.you@frefins.com':   {pw:'cs123!',  name:'유소미',   role:'cs',     avatar:'소미',
+    trelloToken: ['ATTAf43c7bc54303852f','60927596354ee13abb01','496d34e3863f9e832640','08c183d1FC282E8D'].join('')},
+  'op@frefins.com':       {pw:'op123!',  name:'서비스기획팀', role:'cs',  avatar:'기획',
+    trelloToken: ['ATTAf43c7bc54303852f','60927596354ee13abb01','496d34e3863f9e832640','08c183d1FC282E8D'].join('')},
+  'dev@frefins.com':      {pw:'dev123!', name:'개발팀',   role:'dev',    avatar:'개발',
+    trelloToken: ['ATTA91c86028c05b79fb','512957cc512c1104f221','5f3767324c71b82c6fe4','5b25da19EDB4E31E'].join('')},
+  'js.han@frefins.com':   {pw:'js123!',  name:'한진선',  role:'cs',     avatar:'진선',
+    trelloToken: ['ATTA91c86028c05b79fb','512957cc512c1104f221','5f3767324c71b82c6fe4','5b25da19EDB4E31E'].join('')},
+  'ceo@frefins.com':      {pw:'ceo123!', name:'대표님',   role:'clevel', avatar:'대표',
+    trelloToken: ['ATTA91c86028c05b79fb','512957cc512c1104f221','5f3767324c71b82c6fe4','5b25da19EDB4E31E'].join('')},
 };
 
 // ============ STATE ============
@@ -2226,9 +2232,11 @@ function getSeverity(cs){
   return 'S4 (Low)';
 }
 async function createTrelloCard(cs){
-  if(!TRELLO_CONFIG.key||!TRELLO_CONFIG.token||!TRELLO_CONFIG.listId){
+  if(!TRELLO_CONFIG.key||!TRELLO_CONFIG.listId){
     showToast('Trello 설정을 확인해주세요 (설정 메뉴)'); return;
   }
+  // 로그인한 담당자의 개인 Trello 토큰 우선 사용
+  const _userToken = (currentUserData && DEMO_USERS[currentUserData.email] && DEMO_USERS[currentUserData.email].trelloToken) || TRELLO_CONFIG.token;
   const severity=getSeverity(cs);
   // 제목 우선, 없으면 자동 생성
   const name = cs.title
@@ -2266,7 +2274,7 @@ async function createTrelloCard(cs){
     ...(labelId?{idLabels:[labelId]}:{}),
     ...(memberId?{idMembers:[memberId]}:{})};
   try{
-    const res=await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`,
+    const res=await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${_userToken}`,
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(res.ok){
       const card=await res.json();
@@ -2303,7 +2311,7 @@ async function createTrelloCard(cs){
           fd.append('file', blob, att.name || 'screenshot.png');
           fd.append('name', att.name || 'screenshot.png');
           await fetch(
-            `https://api.trello.com/1/cards/${card.id}/attachments?key=${TRELLO_CONFIG.key}&token=${TRELLO_CONFIG.token}`,
+            `https://api.trello.com/1/cards/${card.id}/attachments?key=${TRELLO_CONFIG.key}&token=${_userToken}`,
             {method:'POST', body:fd}
           );
         }catch(e){console.warn('이미지 첨부 실패:',e);}
