@@ -198,9 +198,9 @@ tr:hover td{background:var(--surface2);cursor:pointer}
 .toast.show{opacity:1;transform:translateY(0)}
 
 /* Trello section */
-.trello-box{background:var(--blue-l);border:0.5px solid var(--blue-m);border-radius:var(--r-sm);padding:12px 14px;margin-top:12px}
-.trello-label{font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px}
-.trello-status{font-size:12px;color:var(--blue)}
+.dooray-box{background:var(--blue-l);border:0.5px solid var(--blue-m);border-radius:var(--r-sm);padding:12px 14px;margin-top:12px}
+.dooray-label{font-size:11px;font-weight:600;color:var(--blue);margin-bottom:4px}
+.dooray-status{font-size:12px;color:var(--blue)}
 
 /* Config page */
 .config-section{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
@@ -660,9 +660,9 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
         <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 내용 메모</div><div class="detail-value" id="dp-memo" style="color:var(--text2)">—</div></div>
         <div id="dp-images" style="display:none;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
-        <div class="trello-box" id="dp-trello" style="display:none">
-          <div class="trello-label">📋 Trello 카드</div>
-          <div class="trello-status" id="dp-trello-url">—</div>
+        <div class="dooray-box" id="dp-dooray" style="display:none">
+          <div class="dooray-label">📋 Dooray 업무</div>
+          <div class="dooray-status" id="dp-dooray-url">—</div>
         </div>
       </div>
       <div class="page-header">
@@ -743,7 +743,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
         <div class="field"><label>접수일 *</label><input type="date" id="f-date"></div>
         <div class="field"><label>유형 *</label>
-          <select id="f-type" onchange="checkTrelloPreview()">
+          <select id="f-type" onchange="checkDoorayPreview()">
             <option value="단순 문의">단순 문의</option>
             <option value="오류">오류</option>
             <option value="수정">수정</option>
@@ -780,7 +780,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
 
       <!-- 제목 -->
       <div class="field" style="margin-bottom:12px">
-        <label>제목 * <span style="font-size:11px;color:var(--text3);font-weight:400">— Trello 카드 제목으로 연동됩니다 (예: [퍼시픽모빌리티] CMS 결제 실패 확인요청)</span></label>
+        <label>제목 * <span style="font-size:11px;color:var(--text3);font-weight:400">— Dooray 업무 제목으로 연동됩니다 (예: [퍼시픽모빌리티] CMS 결제 실패 확인요청)</span></label>
         <input id="f-title" type="text" placeholder="요청 내용 요약" style="font-size:13px">
       </div>
 
@@ -818,8 +818,8 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
             <option value="보류">보류</option>
           </select>
         </div>
-        <div class="field"><label>🔗 Trello 링크 (선택)</label>
-          <input id="f-trello" type="url" placeholder="https://trello.com/c/..." style="font-size:12px">
+        <div class="field"><label>🔗 Dooray 링크 (선택)</label>
+          <input id="f-dooray" type="url" placeholder="https://yourteam.dooray.com/task/..." style="font-size:12px">
         </div>
       </div>
 
@@ -832,8 +832,8 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
           <span id="submit-label">등록</span>
         </button>
         <button class="btn" onclick="cancelRegister()">취소</button>
-        <div id="trello-preview-badge" style="display:none;align-items:center;gap:6px;font-size:12px;color:#5a5955;padding:8px 12px;background:#f5f4f1;border-radius:8px">
-          <span>📋</span><span>등록 시 Trello 카드 자동 생성</span>
+        <div id="dooray-preview-badge" style="display:none;align-items:center;gap:6px;font-size:12px;color:#5a5955;padding:8px 12px;background:#f5f4f1;border-radius:8px">
+          <span>📋</span><span>등록 시 Dooray 업무 자동 생성</span>
         </div>
       </div>
     </div>
@@ -912,9 +912,9 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
         <div class="detail-field" style="margin-top:10px"><div class="detail-label">처리 내용 메모</div><div class="detail-value" id="dp-memo" style="color:var(--text2)">—</div></div>
         <div id="dp-images" style="display:none;display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
-        <div class="trello-box" id="dp-trello" style="display:none">
-          <div class="trello-label">📋 Trello 카드</div>
-          <div class="trello-status" id="dp-trello-url">—</div>
+        <div class="dooray-box" id="dp-dooray" style="display:none">
+          <div class="dooray-label">📋 Dooray 업무</div>
+          <div class="dooray-status" id="dp-dooray-url">—</div>
         </div>
       </div>
       <div class="page-header"><div class="page-title">SLA 초과 현황</div></div>
@@ -982,7 +982,7 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
  
     <!-- CONFIG -->
     <div id="page-config" class="page">
-      <div class="page-header"><div class="page-title">⚙️ 운영 설정</div><div class="page-sub">Firebase · Trello 연동 설정</div></div>
+      <div class="page-header"><div class="page-title">⚙️ 운영 설정</div><div class="page-sub">Firebase · Dooray 연동 설정</div></div>
       <div class="config-section">
         <div class="config-ttl">🔥 Firebase 프로젝트 설정</div>
         <div class="field"><label>API Key</label><input id="cfg-apiKey" placeholder="AIza..."></div>
@@ -998,45 +998,49 @@ code{font-family:'SF Mono',monospace;font-size:11px;background:var(--surface3);p
         </div>
       </div>
       <div class="config-section">
-        <div class="config-ttl">📋 Trello 연동 설정</div>
+        <div class="config-ttl">📋 Dooray 연동 설정</div>
         <div class="modal-row">
-          <div class="field"><label>API Key</label><input id="cfg-trelloKey" placeholder="Trello API Key"></div>
-          <div class="field"><label>Token</label><input id="cfg-trelloToken" placeholder="Trello Token"></div>
+          <div class="field"><label>API Token</label><input id="cfg-doorayToken" placeholder="Dooray API Token"></div>
+          <div class="field"><label>조직 도메인 (Tenant)</label><input id="cfg-doorayDomain" placeholder="frefins (예: frefins.dooray.com)"></div>
         </div>
         <div class="modal-row">
-          <div class="field"><label>Board ID</label><input id="cfg-trelloBoardId" placeholder="UBgxszw3"></div>
-          <div class="field"><label>List ID (요청 컬럼)</label><input id="cfg-trelloListId" placeholder="671b466151fc..."></div>
+          <div class="field"><label>Project ID</label><input id="cfg-doorayProjectId" placeholder="예: 4352446550201052847"></div>
         </div>
-        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">레이블 ID (선택 — Trello 보드에서 미리 생성 후 입력)</div>
+        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">태그 ID (선택 — Dooray 프로젝트에서 미리 생성 후 입력)</div>
         <div class="modal-row">
-          <div class="field"><label>🔴 오류 레이블 ID</label><input id="cfg-label-error" placeholder="레이블 ID (선택)"></div>
-          <div class="field"><label>🔵 개선 요청 레이블 ID</label><input id="cfg-label-improve" placeholder="레이블 ID (선택)"></div>
-        </div>
-        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">담당자 Trello Member ID (선택)</div>
-        <div class="modal-row">
-          <div class="field"><label>유소미</label><input id="cfg-member-somi" placeholder="Member ID (선택)"></div>
-          <div class="field"><label>안소진</label><input id="cfg-member-sojin" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>🔴 오류 태그 ID</label><input id="cfg-tag-error" placeholder="태그 ID (선택)"></div>
+          <div class="field"><label>🔵 개선 요청 태그 ID</label><input id="cfg-tag-improve" placeholder="태그 ID (선택)"></div>
         </div>
         <div class="modal-row">
-          <div class="field"><label>김수아</label><input id="cfg-member-sua" placeholder="Member ID (선택)"></div>
-          <div class="field"><label>한진선</label><input id="cfg-member-hyomin" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>🟠 수정 태그 ID</label><input id="cfg-tag-edit" placeholder="태그 ID (선택)"></div>
+          <div class="field"><label>⚫ 삭제 태그 ID</label><input id="cfg-tag-delete" placeholder="태그 ID (선택)"></div>
+        </div>
+        <div style="margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--text2)">담당자 Dooray Member ID (선택 — organizationMemberId)</div>
+        <div class="modal-row">
+          <div class="field"><label>유소미</label><input id="cfg-dmember-somi" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>안소진</label><input id="cfg-dmember-sojin" placeholder="Member ID (선택)"></div>
+        </div>
+        <div class="modal-row">
+          <div class="field"><label>김수아</label><input id="cfg-dmember-sua" placeholder="Member ID (선택)"></div>
+          <div class="field"><label>한진선</label><input id="cfg-dmember-hyomin" placeholder="Member ID (선택)"></div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="saveTrelloConfig()" id="trello-save-btn">Trello 설정 저장</button>
-          <button class="btn btn-sm" onclick="testTrelloConnection()">🔗 연결 테스트</button>
-          <span id="trello-test-result" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn btn-primary" onclick="saveDoorayConfig()" id="dooray-save-btn">Dooray 설정 저장</button>
+          <button class="btn btn-sm" onclick="testDoorayConnection()">🔗 연결 테스트</button>
+          <span id="dooray-test-result" style="font-size:12px;color:var(--text3)"></span>
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-sm" onclick="debugTrello()" style="background:#f5f4f1;color:#1a1a18;border:1px solid #e0deda">🔍 연동 상태 확인</button>
-          <button class="btn btn-sm btn-primary" onclick="forceTrelloTest()" style="font-size:12px">▶ 테스트 카드 생성</button>
-          <span id="trello-debug-result" style="font-size:12px;color:var(--text3)"></span>
+          <button class="btn btn-sm" onclick="debugDooray()" style="background:#f5f4f1;color:#1a1a18;border:1px solid #e0deda">🔍 연동 상태 확인</button>
+          <button class="btn btn-sm btn-primary" onclick="forceDoorayTest()" style="font-size:12px">▶ 테스트 업무 생성</button>
+          <span id="dooray-debug-result" style="font-size:12px;color:var(--text3)"></span>
         </div>
         <div class="config-note" style="margin-top:12px">
           ⚠️ <b>Token은 보안상 코드에 포함되지 않습니다.</b> 아래 순서로 각 브라우저에서 직접 입력·저장해주세요.<br><br>
-          1. <a href="https://trello.com/power-ups/admin" target="_blank" style="color:var(--blue)">trello.com/power-ups/admin</a> → frefins-cs 앱 → API Key 탭<br>
-          2. API Key: <b>3d5fde1f5c6c6429927888215d26a82c</b><br>
-          3. Token 링크 클릭 → 허용 → Token 복사 후 위 Token 란에 붙여넣기<br>
-          4. List ID: <b>671b466151fc7351453b29ca</b> (요청 컬럼) / Board ID: <b>UBgxszw3</b>
+          1. Dooray 우측 상단 프로필 → 개인 설정 → 인증된 디바이스/API → API 토큰 생성<br>
+          2. CS-현황 프로젝트 → 설정 → 프로젝트 정보에서 Project ID 확인 (업무 상세 URL의 숫자, 예: dooray.com/task/<b>4352446550201052847</b>)<br>
+          3. 프로젝트 → 설정 → 태그 관리에서 오류 / 개선 요청 / 수정 / 삭제 태그를 만들고 각 ID 확인 후 위에 입력<br>
+          4. 조직 관리 → 구성원 상세 또는 API(<code>/common/v1/members?externalEmailAddresses=...</code>)로 담당자 Member ID 확인<br><br>
+          ℹ️ Dooray API는 사내망/허용된 출처에서만 CORS를 허용할 수 있습니다. 먼저 <b>연결 테스트</b>로 GitHub Pages에서 직접 호출이 되는지 확인해주세요. 막힐 경우 Cloudflare Worker 같은 작은 프록시 서버가 필요할 수 있습니다.
         </div>
       </div>
       <div class="config-section">
@@ -1301,6 +1305,14 @@ const TRELLO_CONFIG = {
   boardId:'UBgxszw3',
   labelIds:  JSON.parse(localStorage.getItem('trello_labelIds')||'{}'),
   memberIds: JSON.parse(localStorage.getItem('trello_memberIds')||'{}'),
+};
+// Trello → Dooray 전환: 신규 CS는 Dooray 업무로 생성됩니다. (과거 trelloUrl 데이터는 그대로 조회용으로 유지)
+const DOORAY_CONFIG = {
+  token:     localStorage.getItem('dooray_token')     || '',
+  domain:    localStorage.getItem('dooray_domain')    || '',
+  projectId: localStorage.getItem('dooray_projectId') || '',
+  tagIds:    JSON.parse(localStorage.getItem('dooray_tagIds')||'{}'),
+  memberIds: JSON.parse(localStorage.getItem('dooray_memberIds')||'{}'),
 };
 const VOC_INIT = [{"id":"voc0000","date":"2026-01-07","co":"퍼시펙렌터카","category":"결제/정산 관련","title":"PG사 가상계좌 사용 시 매칭가능여부","content":"현재 당사는 장기렌트 이용 고객님들의 결제 계좌를 하나의 계좌로 입금받고 상계처리를 하고 있습니다.","urgency":"보통","dev":""},{"id":"voc0001","date":"2026-01-07","co":"퍼시픽렌터카","category":"기존 기능 오류/불편","title":"미수 상세 화면에서 미납내용 문자 or 알림톡 발송 기능 개선","content":"미납 발생 시 프리핀스 로그인 후 이슈리스트에서 내용 수정하여 알림발송하고 있으나 미납 건별로 수기 작성 및 발송해야하는 번거로움이","urgency":"매우 급함","dev":""},{"id":"voc0002","date":"2026-01-26","co":"현대아이티","category":"UI/UX 편의성 개선","title":"청구 탭 내의 기능을 1.0 ver과 동일하게 부탁 드립니다.","content":"안녕하세요.","urgency":"보통","dev":"개발"},{"id":"voc0003","date":"2026-01-26","co":"현대아이티","category":"UI/UX 편의성 개선","title":"청구 탭 내의 기능을 1.0 ver과 동일하게 부탁 드립니다.","content":"안녕하세요.","urgency":"보통","dev":"개발"},{"id":"voc0004","date":"2026-02-26","co":"현대아이티 / 유기풍대리","category":"기존 기능 오류/불편","title":"계약서 삭제 관련 요청의 건","content":"안녕하세요.","urgency":"보통","dev":""},{"id":"voc0005","date":"2026-02-26","co":"현대아이티 / 유기풍대리","category":"기존 기능 오류/불편","title":"계약서 삭제 관련 요청의 건","content":"안녕하세요.","urgency":"보통","dev":""},{"id":"voc0006","date":"2026-03-24","co":"퍼시픽렌터카 / 퍼시픽모빌리티","category":"기존 기능 오류/불편","title":"입금계약건 매칭 관련 개선 요청","content":"프리핀스 > 청구 납기 > 은행입출금내역 조회 화면에서","urgency":"보통","dev":""},{"id":"voc0007","date":"2026-03-24","co":"퍼시픽렌터카 / 퍼시픽모빌리티","category":"기존 기능 오류/불편","title":"입금계약건 매칭 관련 개선 요청","content":"프리핀스 > 청구 납기 > 은행입출금내역 조회 화면에서","urgency":"보통","dev":""}];
 let VOC_DATA = [];
@@ -1861,11 +1873,11 @@ function downloadCSExcel() {
   data.sort((a,b) => b.date.localeCompare(a.date));
 
   // CSV 생성
-  const headers = ['접수일','채널','유형','기업구분','업체명','제목','내용','상태','SLA','담당자','Trello URL','메모'];
+  const headers = ['접수일','채널','유형','기업구분','업체명','제목','내용','상태','SLA','담당자','Dooray/Trello URL','메모'];
   const rows = data.map(c => [
     c.date, c.channel, c.type, c.biz, c.co,
     c.title||'', (c.content||'').replace(/\n/g,' ').replace(/,/g,'，'),
-    c.status, c.sla||'', c.staff, c.trelloUrl||'',
+    c.status, c.sla||'', c.staff, c.doorayUrl||c.trelloUrl||'',
     (c.memo||'').replace(/\n/g,' ')
   ]);
 
@@ -1916,7 +1928,7 @@ function renderCSTable(resetPage){
       <td>${typeBadge(c.type)}</td>
       <td>${c.biz}</td>
       <td class="td-main">${c.co}</td>
-      <td class="td-truncate">${(c.title||c.content).replace(/\n/g,' · ')}${c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello">🔗</a>`:''}</td>
+      <td class="td-truncate">${(c.title||c.content).replace(/\n/g,' · ')}${c.doorayUrl?` <a href="${c.doorayUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Dooray">🔗</a>`:(c.trelloUrl?` <a href="${c.trelloUrl}" target="_blank" onclick="event.stopPropagation()" style="color:#2e7fd4;font-size:11px;text-decoration:none" title="Trello (과거)">🔗</a>`:'')}</td>
       <td>${statusBadge(c.status)}</td>
       <td>${slaBadge(c.sla)}</td>
       <td>${c.staff}</td>
@@ -1985,12 +1997,15 @@ function selectCS(id){
     }else imgArea.style.display='none';
   }
 
-  // Trello
-  const trelloBox=$('#dp-trello');
-  const trelloUrlEl=$('#dp-trello-url');
-  if(cs.trelloUrl){
+  // Dooray (신규) / Trello (과거 기록)
+  const trelloBox=$('#dp-dooray');
+  const trelloUrlEl=$('#dp-dooray-url');
+  if(cs.doorayUrl){
     trelloBox.style.display='';
-    trelloUrlEl.innerHTML=`<a href="${cs.trelloUrl}" target="_blank" style="color:var(--blue);word-break:break-all;font-size:12px">🔗 Trello 카드 보기</a>`;
+    trelloUrlEl.innerHTML=`<a href="${cs.doorayUrl}" target="_blank" style="color:var(--blue);word-break:break-all;font-size:12px">🔗 Dooray 업무 보기</a>`;
+  }else if(cs.trelloUrl){
+    trelloBox.style.display='';
+    trelloUrlEl.innerHTML=`<a href="${cs.trelloUrl}" target="_blank" style="color:var(--blue);word-break:break-all;font-size:12px">🔗 Trello 카드 보기 (과거 기록)</a>`;
   }else trelloBox.style.display='none';
 
   const canEdit=currentUserData&&['cs','admin'].includes(currentUserData.role);
@@ -2026,7 +2041,7 @@ function editCS(id){
   document.getElementById('f-co').value=cs.co;
   document.getElementById('f-memo').value=cs.memo||'';
   document.getElementById('f-status').value=cs.status;
-  document.getElementById('f-trello').value=cs.trelloUrl||'';
+  document.getElementById('f-dooray').value=cs.doorayUrl||cs.trelloUrl||'';
   if(document.getElementById('f-title')) document.getElementById('f-title').value=cs.title||'';
   document.getElementById('f-content').value=cs.content||'';
   const ed=document.getElementById('f-content-editor');
@@ -2063,7 +2078,7 @@ function openRegisterModal(){
   document.getElementById('f-co').value='';
   document.getElementById('f-memo').value='';
   document.getElementById('f-status').value='접수';
-  document.getElementById('f-trello').value='';
+  document.getElementById('f-dooray').value='';
   if(document.getElementById('f-title')) document.getElementById('f-title').value='';
   document.getElementById('f-content').value='';
   const ed=document.getElementById('f-content-editor');
@@ -2138,12 +2153,12 @@ function syncContentField(editor){
   const ta=document.getElementById('f-content');
   if(ta) ta.value = editorToText(editor);
 }
-function checkTrelloPreview(){
+function checkDoorayPreview(){
   const t=document.getElementById('f-type').value;
-  const badge=document.getElementById('trello-preview-badge');
+  const badge=document.getElementById('dooray-preview-badge');
   if(badge){
-    const trelloTypes=['오류','개선 요청','수정','삭제'];
-    badge.style.display=trelloTypes.includes(t)?'flex':'none';
+    const autoCreateTypes=['오류','개선 요청','수정','삭제'];
+    badge.style.display=autoCreateTypes.includes(t)?'flex':'none';
   }
 }
 async function getImagesBase64(){
@@ -2171,7 +2186,7 @@ async function submitCS(){
   const memo=document.getElementById('f-memo').value.trim();
   const status=document.getElementById('f-status').value;
   const staff=document.getElementById('f-staff').value;
-  const trelloUrl=document.getElementById('f-trello')?.value.trim()||'';
+  const doorayUrl=document.getElementById('f-dooray')?.value.trim()||'';
   const title=document.getElementById('f-title')?.value.trim()||'';
   const ed=document.getElementById('f-content-editor');
   const contentEl=document.getElementById('f-content');
@@ -2189,7 +2204,7 @@ async function submitCS(){
 
   if(editingId){
     const cs=allCS.find(c=>c.id===editingId);
-    if(cs) Object.assign(cs,{date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images});
+    if(cs) Object.assign(cs,{date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,doorayUrl,images});
     try {
       const extra = allCS.filter(c => c.id.startsWith('cs'));
       localStorage.setItem('frp_cs_extra', JSON.stringify(extra));
@@ -2197,7 +2212,7 @@ async function submitCS(){
     saveCSChange(cs); // 상태/메모 변경 영구 저장
     showToast('수정했습니다 ✓');
   }else{
-    const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,trelloUrl,images,sla:'',createdAt:new Date()};
+    const newCS={id:'cs'+Date.now(),date,channel,type,biz,co,title,content,contentHtml,memo,status,staff,doorayUrl,images,sla:'',createdAt:new Date()};
     allCS.unshift(newCS);
     // localStorage + Firestore 동시 저장 (기기간 동기화)
     try {
@@ -2206,12 +2221,12 @@ async function submitCS(){
       localStorage.setItem('frp_cs_extra', JSON.stringify(extra));
     } catch(e) {}
     saveCSToFirestore(newCS); // 비동기 - 다른 기기 동기화
-    const trelloTypes=['오류','개선 요청','수정','삭제'];
-    if(trelloTypes.includes(type)){
+    const autoCreateTypes=['오류','개선 요청','수정','삭제'];
+    if(autoCreateTypes.includes(type)){
       try{
-        await createTrelloCard(newCS);
-        showToast(newCS.trelloUrl?'등록 완료 ✓ · Trello 카드 생성됨':'등록 완료 ✓ (Trello 연동 확인 필요)');
-      }catch(e){showToast('등록 완료 ✓ (Trello 오류: '+e.message+')');}
+        await createDoorayTask(newCS);
+        showToast(newCS.doorayUrl?'등록 완료 ✓ · Dooray 업무 생성됨':'등록 완료 ✓ (Dooray 연동 확인 필요)');
+      }catch(e){showToast('등록 완료 ✓ (Dooray 오류: '+e.message+')');}
     }else showToast('등록 완료 ✓');
   }
   computeSLA(); renderAll();
@@ -2225,21 +2240,19 @@ async function submitCS(){
   editingId=null;
 }
 
-// ============ TRELLO ============
+// ============ DOORAY ============
 function getSeverity(cs){
   if(cs.type==='오류') return 'S2 (High)';
   if(cs.type==='개선 요청') return 'S3 (Medium)';
   return 'S4 (Low)';
 }
-async function createTrelloCard(cs){
-  if(!TRELLO_CONFIG.key||!TRELLO_CONFIG.listId){
-    showToast('Trello 설정을 확인해주세요 (설정 메뉴)'); return;
+async function createDoorayTask(cs){
+  if(!DOORAY_CONFIG.token||!DOORAY_CONFIG.projectId){
+    showToast('Dooray 설정을 확인해주세요 (설정 메뉴)'); return;
   }
-  // 로그인한 담당자의 개인 Trello 토큰 우선 사용
-  const _userToken = (currentUserData && DEMO_USERS[currentUserData.email] && DEMO_USERS[currentUserData.email].trelloToken) || TRELLO_CONFIG.token;
   const severity=getSeverity(cs);
   // 제목 우선, 없으면 자동 생성
-  const name = cs.title
+  const subject = cs.title
     ? `[ ${cs.co} ] ${cs.title}`
     : `[${cs.type}] [${severity}] ${cs.co} — ${cs.content.slice(0,50)}`;
   const d=[];
@@ -2264,96 +2277,78 @@ async function createTrelloCard(cs){
   d.push('---');
   d.push('SLA 기준: 오류 7영업일 / 개선요청 14일 이내 피드백');
   d.push('자동생성: '+new Date().toLocaleString('ko-KR'));
-  const desc=d.join('\n');
+  const content=d.join('\n');
   const SLA_DAYS={'오류':7,'개선 요청':14,'수정':3,'삭제':3,'단순 문의':1};
   const dueDate=new Date(cs.date);
   dueDate.setDate(dueDate.getDate()+(SLA_DAYS[cs.type]||7));
-  const labelId=TRELLO_CONFIG.labelIds?.[cs.type];
-  const memberId=TRELLO_CONFIG.memberIds?.[cs.staff];
-  const body={idList:TRELLO_CONFIG.listId,name,desc,due:dueDate.toISOString(),
-    ...(labelId?{idLabels:[labelId]}:{}),
-    ...(memberId?{idMembers:[memberId]}:{})};
+  const tagId=DOORAY_CONFIG.tagIds?.[cs.type];
+  const memberId=DOORAY_CONFIG.memberIds?.[cs.staff];
+  const body={
+    subject, body:{mimeType:'text/x-markdown', content},
+    dueDate: dueDate.toISOString(), dueDateFlag: true,
+    priority: (cs.type==='오류')?'high':'none',
+    ...(tagId?{tagIds:[tagId]}:{}),
+    ...(memberId?{users:{to:[{type:'member',member:{organizationMemberId:memberId}}]}}:{})
+  };
   try{
-    const res=await fetch(`https://api.trello.com/1/cards?key=${TRELLO_CONFIG.key}&token=${_userToken}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(res.ok){
-      const card=await res.json();
-      cs.trelloUrl=card.url;
-      cs.trelloCardId=card.id;
-
-      // 이미지 첨부 (붙여넣은 이미지 + f-images 파일)
-      const attachImages = [];
-
-      // 1) contenteditable 에디터 내 붙여넣은 이미지
-      const ed = document.getElementById('f-content-editor');
-      if(ed){
-        ed.querySelectorAll('img').forEach((img,i)=>{
-          attachImages.push({name:'screenshot_'+(i+1)+'.png', data:img.src});
-        });
-      }
-
-      // 2) 파일 첨부 이미지
-      if(cs.images && cs.images.length){
-        cs.images.forEach(img=>attachImages.push({name:img.name, data:img.data}));
-      }
-
-      // Trello 첨부파일 업로드 (base64 → Blob → FormData)
-      for(const att of attachImages){
-        try{
-          // base64 → Blob (fetch data: URL 대신 atob 사용)
-          const arr = att.data.split(',');
-          const mime = arr[0].match(/:(.*?);/)[1];
-          const bstr = atob(arr[1]);
-          const bytes = new Uint8Array(bstr.length);
-          for(let i=0;i<bstr.length;i++) bytes[i]=bstr.charCodeAt(i);
-          const blob = new Blob([bytes], {type: mime});
-          const fd = new FormData();
-          fd.append('file', blob, att.name || 'screenshot.png');
-          fd.append('name', att.name || 'screenshot.png');
-          await fetch(
-            `https://api.trello.com/1/cards/${card.id}/attachments?key=${TRELLO_CONFIG.key}&token=${_userToken}`,
-            {method:'POST', body:fd}
-          );
-        }catch(e){console.warn('이미지 첨부 실패:',e);}
-      }
-      if(attachImages.length) showToast('✅ Trello 카드 + 이미지 '+attachImages.length+'장 첨부 완료');
-
-    }else console.warn('Trello 실패:',res.status,await res.text());
-  }catch(e){console.warn('Trello 오류:',e);showToast('Trello 연동 실패: '+e.message);}
+    const res=await fetch(`https://api.dooray.com/project/v1/projects/${DOORAY_CONFIG.projectId}/posts`,
+      {method:'POST',headers:{'Content-Type':'application/json','Authorization':'dooray-api '+DOORAY_CONFIG.token},body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>null);
+    if(res.ok && data?.header?.isSuccessful){
+      const postId=data.result.id;
+      cs.doorayUrl = DOORAY_CONFIG.domain
+        ? `https://${DOORAY_CONFIG.domain}.dooray.com/task/${postId}`
+        : `https://api.dooray.com/project/v1/projects/${DOORAY_CONFIG.projectId}/posts/${postId}`;
+      cs.doorayPostId = postId;
+      // 참고: 이미지 첨부(스크린샷)는 CS 기록 내에 base64로 보존되며,
+      // Dooray 첨부파일 API 연동은 추후 별도 확인 후 추가 가능합니다.
+    }else{
+      console.warn('Dooray 실패:', res.status, data);
+      showToast('Dooray 연동 실패: '+(data?.header?.resultMessage || ('HTTP '+res.status)));
+    }
+  }catch(e){console.warn('Dooray 오류:',e);showToast('Dooray 연동 실패: '+e.message);}
 }
-function debugTrello(){
-  const el=document.getElementById('trello-debug-result');
+function debugDooray(){
+  const el=document.getElementById('dooray-debug-result');
   if(!el) return;
-  const cfg=TRELLO_CONFIG;
-  const info='key: '+(cfg.key?cfg.key.slice(0,8)+'...':'❌없음')+' | token: '+(cfg.token?cfg.token.slice(0,8)+'...':'❌없음')+' | listId: '+(cfg.listId||'❌없음');
+  const cfg=DOORAY_CONFIG;
+  const info='token: '+(cfg.token?cfg.token.slice(0,8)+'...':'❌없음')+' | projectId: '+(cfg.projectId||'❌없음')+' | domain: '+(cfg.domain||'❌없음');
   el.textContent=info;
-  el.style.color=(cfg.key&&cfg.token&&cfg.listId)?'var(--teal)':'var(--red)';
+  el.style.color=(cfg.token&&cfg.projectId)?'var(--teal)':'var(--red)';
 }
-async function forceTrelloTest(){
-  const el=document.getElementById('trello-debug-result');
+async function forceDoorayTest(){
+  const el=document.getElementById('dooray-debug-result');
   if(el) el.textContent='테스트 중...';
-  const {key,token,listId}=TRELLO_CONFIG;
-  if(!key||!token||!listId){if(el){el.textContent='❌ 설정값 없음';el.style.color='var(--red)';}return;}
+  const {token,projectId,domain}=DOORAY_CONFIG;
+  if(!token||!projectId){if(el){el.textContent='❌ 설정값 없음';el.style.color='var(--red)';}return;}
   try{
-    const res=await fetch(`https://api.trello.com/1/cards?key=${key}&token=${token}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({idList:listId,name:'[CS운영시스템] 연동 테스트 카드 - 확인 후 삭제',desc:'테스트 카드입니다.'})
+    const res=await fetch(`https://api.dooray.com/project/v1/projects/${projectId}/posts`,
+      {method:'POST',headers:{'Content-Type':'application/json','Authorization':'dooray-api '+token},
+        body:JSON.stringify({subject:'[CS운영시스템] 연동 테스트 업무 - 확인 후 삭제',body:{mimeType:'text/x-markdown',content:'테스트 업무입니다.'},dueDateFlag:false,priority:'none'})
       });
-    if(res.ok){const c=await res.json();if(el){el.textContent='✅ 성공! '+c.url;el.style.color='var(--teal)';}showToast('✅ Trello 연동 성공!');}
-    else{const t=await res.text();if(el){el.textContent='❌ HTTP '+res.status+': '+t.slice(0,60);el.style.color='var(--red)';}}
-  }catch(e){if(el){el.textContent='❌ '+e.message;el.style.color='var(--red)';}}
+    const data=await res.json().catch(()=>null);
+    if(res.ok && data?.header?.isSuccessful){
+      const url=domain?`https://${domain}.dooray.com/task/${data.result.id}`:data.result.id;
+      if(el){el.textContent='✅ 성공! '+url;el.style.color='var(--teal)';}
+      showToast('✅ Dooray 연동 성공!');
+    }else{
+      if(el){el.textContent='❌ '+(data?.header?.resultMessage||('HTTP '+res.status));el.style.color='var(--red)';}
+    }
+  }catch(e){if(el){el.textContent='❌ '+e.message+' (CORS 제한일 수 있습니다)';el.style.color='var(--amber)';}}
 }
-async function testTrelloConnection(){
-  const el=document.getElementById('trello-test-result');
+async function testDoorayConnection(){
+  const el=document.getElementById('dooray-test-result');
   if(!el) return;
   el.textContent='테스트 중...';
-  const k=TRELLO_CONFIG.key;const t=TRELLO_CONFIG.token;const l=TRELLO_CONFIG.listId;
-  if(!k||!t||!l){el.textContent='❌ Key/Token/ListID 없음';el.style.color='var(--red)';return;}
+  const {token,projectId}=DOORAY_CONFIG;
+  if(!token||!projectId){el.textContent='❌ Token/Project ID 없음';el.style.color='var(--red)';return;}
   try{
-    const res=await fetch(`https://api.trello.com/1/lists/${l}?key=${k}&token=${t}`);
-    if(res.ok){const d=await res.json();el.textContent='✅ 연결 성공: "'+d.name+'"';el.style.color='var(--teal)';}
-    else{el.textContent='❌ HTTP '+res.status;el.style.color='var(--red)';}
-  }catch(e){el.textContent='❌ CORS 제한 - GitHub Pages에서 확인해주세요.';el.style.color='var(--amber)';}
+    const res=await fetch(`https://api.dooray.com/project/v1/projects/${projectId}`,
+      {headers:{'Authorization':'dooray-api '+token}});
+    const data=await res.json().catch(()=>null);
+    if(res.ok && data?.header?.isSuccessful){el.textContent='✅ 연결 성공: "'+data.result.code+'"';el.style.color='var(--teal)';}
+    else{el.textContent='❌ '+(data?.header?.resultMessage||('HTTP '+res.status));el.style.color='var(--red)';}
+  }catch(e){el.textContent='❌ CORS 제한 - 프록시 서버가 필요할 수 있습니다.';el.style.color='var(--amber)';}
 }
 
 // ============ SLA BREACH ============
@@ -2624,16 +2619,17 @@ function loadConfigFields(){
     'cfg-authDomain':localStorage.getItem('fb_authDomain') || FB_DEFAULTS.authDomain||'',
     'cfg-projectId': localStorage.getItem('fb_projectId')  || FB_DEFAULTS.projectId ||'',
     'cfg-appId':     localStorage.getItem('fb_appId')      || FB_DEFAULTS.appId     ||'',
-    'cfg-trelloKey':    localStorage.getItem('trello_key')     || TRELLO_CONFIG.key    ||'',
-    'cfg-trelloToken':  localStorage.getItem('trello_token')   || TRELLO_CONFIG.token  ||'',
-    'cfg-trelloBoardId':localStorage.getItem('trello_boardId') || TRELLO_CONFIG.boardId||'',
-    'cfg-trelloListId': localStorage.getItem('trello_listId')  || TRELLO_CONFIG.listId ||'',
-    'cfg-label-error':   JSON.parse(localStorage.getItem('trello_labelIds')||'{}'  )['오류']     ||'',
-    'cfg-label-improve': JSON.parse(localStorage.getItem('trello_labelIds')||'{}'  )['개선 요청']||'',
-    'cfg-member-somi':   JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['유소미']   ||'',
-    'cfg-member-sojin':  JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['안소진']   ||'',
-    'cfg-member-sua':    JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['김수아']   ||'',
-    'cfg-member-hyomin': JSON.parse(localStorage.getItem('trello_memberIds')||'{}' )['한진선']   ||'',
+    'cfg-doorayToken':    localStorage.getItem('dooray_token')     || DOORAY_CONFIG.token    ||'',
+    'cfg-doorayDomain':   localStorage.getItem('dooray_domain')    || DOORAY_CONFIG.domain   ||'',
+    'cfg-doorayProjectId':localStorage.getItem('dooray_projectId') || DOORAY_CONFIG.projectId||'',
+    'cfg-tag-error':   JSON.parse(localStorage.getItem('dooray_tagIds')||'{}'  )['오류']     ||'',
+    'cfg-tag-improve': JSON.parse(localStorage.getItem('dooray_tagIds')||'{}'  )['개선 요청']||'',
+    'cfg-tag-edit':    JSON.parse(localStorage.getItem('dooray_tagIds')||'{}'  )['수정']     ||'',
+    'cfg-tag-delete':  JSON.parse(localStorage.getItem('dooray_tagIds')||'{}'  )['삭제']     ||'',
+    'cfg-dmember-somi':   JSON.parse(localStorage.getItem('dooray_memberIds')||'{}' )['유소미']   ||'',
+    'cfg-dmember-sojin':  JSON.parse(localStorage.getItem('dooray_memberIds')||'{}' )['안소진']   ||'',
+    'cfg-dmember-sua':    JSON.parse(localStorage.getItem('dooray_memberIds')||'{}' )['김수아']   ||'',
+    'cfg-dmember-hyomin': JSON.parse(localStorage.getItem('dooray_memberIds')||'{}' )['한진선']   ||'',
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el) el.value=val;});
 }
@@ -2650,29 +2646,31 @@ function saveFirebaseConfig(){
   const btn=document.querySelector('[onclick="saveFirebaseConfig()"]');
   if(btn){const ot=btn.textContent;btn.style.background='#0a6650';btn.textContent='✅ 저장됨';setTimeout(()=>{btn.style.background='';btn.textContent=ot;},2500);}
 }
-function saveTrelloConfig(){
+function saveDoorayConfig(){
   const get=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
-  const k=get('cfg-trelloKey'),t=get('cfg-trelloToken'),b=get('cfg-trelloBoardId'),l=get('cfg-trelloListId');
-  const lError=get('cfg-label-error'),lImprove=get('cfg-label-improve');
-  const mSomi=get('cfg-member-somi'),mSojin=get('cfg-member-sojin'),mSua=get('cfg-member-sua'),mHyomin=get('cfg-member-hyomin');
-  if(!k||!t||!l){showToast('API Key, Token, List ID는 필수입니다.');return;}
-  localStorage.setItem('trello_key',k);localStorage.setItem('trello_token',t);
-  if(b) localStorage.setItem('trello_boardId',b);
-  localStorage.setItem('trello_listId',l);
-  const labelIds={};
-  if(lError)   labelIds['오류']=lError;
-  if(lImprove) labelIds['개선 요청']=lImprove;
-  localStorage.setItem('trello_labelIds',JSON.stringify(labelIds));
+  const token=get('cfg-doorayToken'),domain=get('cfg-doorayDomain'),projectId=get('cfg-doorayProjectId');
+  const tError=get('cfg-tag-error'),tImprove=get('cfg-tag-improve'),tEdit=get('cfg-tag-edit'),tDelete=get('cfg-tag-delete');
+  const mSomi=get('cfg-dmember-somi'),mSojin=get('cfg-dmember-sojin'),mSua=get('cfg-dmember-sua'),mHyomin=get('cfg-dmember-hyomin');
+  if(!token||!projectId){showToast('API Token, Project ID는 필수입니다.');return;}
+  localStorage.setItem('dooray_token',token);
+  if(domain) localStorage.setItem('dooray_domain',domain);
+  localStorage.setItem('dooray_projectId',projectId);
+  const tagIds={};
+  if(tError)   tagIds['오류']=tError;
+  if(tImprove) tagIds['개선 요청']=tImprove;
+  if(tEdit)    tagIds['수정']=tEdit;
+  if(tDelete)  tagIds['삭제']=tDelete;
+  localStorage.setItem('dooray_tagIds',JSON.stringify(tagIds));
   const memberIds={};
   if(mSomi)   memberIds['유소미']=mSomi;
   if(mSojin)  memberIds['안소진']=mSojin;
   if(mSua)    memberIds['김수아']=mSua;
   if(mHyomin) memberIds['한진선']=mHyomin;
-  localStorage.setItem('trello_memberIds',JSON.stringify(memberIds));
-  TRELLO_CONFIG.key=k;TRELLO_CONFIG.token=t;TRELLO_CONFIG.boardId=b;TRELLO_CONFIG.listId=l;
-  TRELLO_CONFIG.labelIds=labelIds;TRELLO_CONFIG.memberIds=memberIds;
-  showToast('Trello 설정이 저장되었습니다 ✓');
-  const btn=document.getElementById('trello-save-btn');
+  localStorage.setItem('dooray_memberIds',JSON.stringify(memberIds));
+  DOORAY_CONFIG.token=token;DOORAY_CONFIG.domain=domain;DOORAY_CONFIG.projectId=projectId;
+  DOORAY_CONFIG.tagIds=tagIds;DOORAY_CONFIG.memberIds=memberIds;
+  showToast('Dooray 설정이 저장되었습니다 ✓');
+  const btn=document.getElementById('dooray-save-btn');
   if(btn){const ot=btn.textContent;btn.style.background='#0a6650';btn.textContent='✅ 저장됨';setTimeout(()=>{btn.style.background='';btn.textContent=ot;},2500);}
 }
 function createUser(){
